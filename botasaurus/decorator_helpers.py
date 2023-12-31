@@ -69,10 +69,7 @@ def retry_on_stale_element(_func: Optional[Callable] = None, *, retries=3, wait_
             return func(*args, **kwargs)
         return wrapper
 
-    if _func is None:
-        return decorator
-    else:
-        return decorator(_func)
+    return decorator if _func is None else decorator(_func)
 
 
 def retry_on_request_failure(_func: Optional[Callable] = None, *, retries=5, wait_time=1, raise_exception=True):
@@ -88,10 +85,7 @@ def retry_on_request_failure(_func: Optional[Callable] = None, *, retries=5, wai
             return func(*args, **kwargs)
         return wrapper
 
-    if _func is None:
-        return decorator
-    else:
-        return decorator(_func)
+    return decorator if _func is None else decorator(_func)
 
 
 def measure_time(_func: Optional[Callable] = None):
@@ -106,10 +100,7 @@ def measure_time(_func: Optional[Callable] = None):
 
         return wrapper
 
-    if _func is None:
-        return decorator
-    else:
-        return decorator(_func)
+    return decorator if _func is None else decorator(_func)
 
 
 def ignore(_func: Optional[Callable] = None, on_exception_return_Value = None):
@@ -125,8 +116,5 @@ def ignore(_func: Optional[Callable] = None, on_exception_return_Value = None):
 
         return wrapper
 
-    if _func is None:
-        return decorator
-    else:
-        return decorator(_func)
+    return decorator if _func is None else decorator(_func)
 

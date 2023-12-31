@@ -28,8 +28,7 @@ def retry_if_is_error(func, instances=None, retries=2, wait_time=None, log_error
     while tries < retries:
         tries += 1
         try:
-            created_result = func()
-            return created_result
+            return func()
         except Exception as e:
             is_valid_error, index = is_errors_instance(
                 errors_only_instances, e)
@@ -76,10 +75,7 @@ API = 'https://www.1secmail.com/api/v1/'
 def extractids(req):
     idList = []
     for i in req:
-        for k, v in i.items():
-            if k == 'id':
-                mailId = v
-                idList.append(mailId)
+        idList.extend(v for k, v in i.items() if k == 'id')
     return idList
 
 
@@ -97,21 +93,20 @@ def get_domains():
 
 class TempMail():
 
-    def generate_email(username):
+    def generate_email(self):
         # ['1secmail.com', '1secmail.net', '1secmail.org']
         domain = random.choice(get_domains())
 
-        email = f'{username}@{domain}'
-        return email
+        return f'{self}@{domain}'
 
-    def extract(email):
-        ls = email.split('@')
+    def extract(self):
+        ls = self.split('@')
         login = ls[0]
         domain = ls[1]
         return login, domain
 
-    def deleteMailbox(email):
-        login, domain = TempMail.extract(email)
+    def deleteMailbox(self):
+        login, domain = TempMail.extract(self)
         url = 'https://www.1secmail.com/mailbox'
         data = {
             'action': 'deleteMailbox',
@@ -200,11 +195,8 @@ class TempMail():
             req = requests.get(msgRead).json()
 
             html = req['htmlBody']
-            
-            if html == '':
-                return req['textBody']
-            else:
-                return  html
+
+            return req['textBody'] if html == '' else html
 
         retry_if_is_error(
             run, NETWORK_ERRORS + [AssertionError], 
@@ -214,9 +206,9 @@ class TempMail():
         data = run()
         return data
 
-    def get_email_link_and_delete_mailbox(email):
-        link = TempMail.get_email_link(email)
-        TempMail.deleteMailbox(email)
+    def get_email_link_and_delete_mailbox(self):
+        link = TempMail.get_email_link(self)
+        TempMail.deleteMailbox(self)
         return link 
 
 if __name__ == '__main__':

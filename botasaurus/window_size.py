@@ -29,11 +29,10 @@ class WindowSize(BaseData):
         _1440_900 = [self.window_size_1440_900] * N_1440_900
         _1600_900 = [self.window_size_1600_900] * N_1600_900
 
-        result = _1920_1080 + _1366_768 + _1536_864 + _1280_720 + _1440_900 + _1600_900
-        return result
+        return _1920_1080 + _1366_768 + _1536_864 + _1280_720 + _1440_900 + _1600_900
     
-    def window_size_to_string(window_size):
-        w, h = window_size 
+    def window_size_to_string(self):
+        w, h = self
         return f'{w},{h}'
 
 WindowSizeInstance = WindowSize() 

@@ -20,7 +20,7 @@ def copy_list(original_list):
 
 
 def delete_from_list(list_of_dicts, dict_item):
-    for i in range(len(list_of_dicts)):
+    for _ in range(len(list_of_dicts)):
         if dict_item in list_of_dicts:
             list_of_dicts.remove(dict_item)
     return list_of_dicts
@@ -70,10 +70,7 @@ class BaseData():
         return ls[hashed_value % ls_len]
 
     def get_n(self, n):
-        ls = []
-        for i in range(n):
-            ls.append(self.get_random_cycled())
-        return ls
+        return [self.get_random_cycled() for _ in range(n)]
 
     def get_hundred(self):
         return self.get_n(100)
@@ -83,30 +80,13 @@ if __name__ == "__main__":
         
     class Test(BaseData):
         def get_data(self):
-            if False:
-            # if IS_PRODUCTION:
-                N_US = 0
-                N_GB = 0
-                N_FR = 0
-                N_NL = 100
-                N_NO = 0
-                N_CA = 0
-                N_IN = 0
-                # N_US = 50
-                # N_GB = 10
-                # N_FR = 10
-                # N_NL = 10
-                # N_NO = 10
-                # N_CA = 10
-                # N_IN = 0
-            else:
-                N_US = 1
-                N_GB = 1
-                N_FR = 1
-                N_NL = 1
-                N_NO = 1
-                N_CA = 1
-                N_IN = 1
+            N_US = 1
+            N_GB = 1
+            N_FR = 1
+            N_NL = 1
+            N_NO = 1
+            N_CA = 1
+            N_IN = 1
 
             US = [{"country_code": "US"}] * N_US
             GB = [{"country_code": "GB"}] * N_GB
@@ -116,8 +96,7 @@ if __name__ == "__main__":
             CA = [{"country_code": "CA"}] * N_CA
             IN = [{"country_code": "IN"}] * N_IN
 
-            result = US+GB+FR+NL+NO+CA+IN
-            return result
+            return US+GB+FR+NL+NO+CA+IN
 
 
     TestInstance = Test() 

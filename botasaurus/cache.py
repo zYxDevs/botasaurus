@@ -19,13 +19,11 @@ def _get_cache_path(func, data):
 
     # Serialize the data to a JSON string and encode to bytes
     serialized_data = json.dumps(data).encode('utf-8')
-    
+
     # Generate a hash from the serialized data
     data_hash = md5(serialized_data).hexdigest()
 
-    # Create a unique cache file path with a .json extension
-    cache_path = os.path.join(fn_cache_dir, data_hash + ".json")
-    return cache_path
+    return os.path.join(fn_cache_dir, f"{data_hash}.json")
 
 
 def _has(cache_path):
@@ -84,9 +82,7 @@ class Cache:
         """Read data from a cache file."""
         _create_cache_directory_if_not_exists(func)
         path = _get_cache_path(func, key_data)
-        if _has(path):
-            return _get(path)
-        return None
+        return _get(path) if _has(path) else None
 
     @staticmethod
     def remove(func, key_data):

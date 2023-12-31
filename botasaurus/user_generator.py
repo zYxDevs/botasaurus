@@ -47,19 +47,19 @@ class ProblemWithGetPersonData(Exception):
 
 def get_missing_chars(word:str):
     missing_chars = []
-    
+
     if not any(char.isupper() for char in word):
         missing_chars.append(random.choice(string.ascii_uppercase))
-    
+
     if not any(char.islower() for char in word):
         missing_chars.append(random.choice(string.ascii_lowercase))
-    
+
     if not any(char.isdigit() for char in word):
         missing_chars.append(random.choice(string.digits))
-    
-    if not any(char in string.punctuation for char in word):
+
+    if all(char not in string.punctuation for char in word):
         missing_chars.append(random.choice(string.punctuation))
-    
+
     random.shuffle(missing_chars)
     return ''.join(missing_chars)
 
@@ -117,7 +117,7 @@ def generate_persons(count: int, gender: Gender = Gender.BOTH, country: Country 
     params = {'gender': gender, 'results': count}
     if country is not None:
          params['nat'] = country
-    
+
     r = requests.get('https://randomuser.me/api', params=params)
     if r.status_code != 200:
         raise ProblemWithGetPersonData()
@@ -127,10 +127,8 @@ def generate_persons(count: int, gender: Gender = Gender.BOTH, country: Country 
     final = [__get_person(data) for data in results]
 
     ids =  [{"id":  1 + i } for i in range(len(results))]
-    
-    datas = merge_list_of_dicts(  ids, final)
-    
-    return datas
+
+    return merge_list_of_dicts(  ids, final)
 
 
 def generate_user(gender: Gender = Gender.BOTH, country: Country = None):

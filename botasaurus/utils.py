@@ -12,7 +12,7 @@ def is_mac():
     return platform == "darwin"
 
 def is_linux():
-    return platform == "linux" or platform == "linux2"
+    return platform in ["linux", "linux2"]
 
 def is_windows():
     return os.name == 'nt'
@@ -26,8 +26,7 @@ def retry(func, retry_wait=None, retries=5):
     while tries < retries:
         tries += 1
         try:
-            created_result = func()
-            return created_result
+            return func()
         except Exception as e:
 
             traceback.print_exc()
@@ -55,8 +54,7 @@ def istuple(el):
 
 def ignore_errors(func, instances=None):
     try:
-        created_result = func()
-        return created_result
+        return func()
     except Exception as e:
         is_valid_error, index = is_errors_instance(
             instances, e)
@@ -74,8 +72,7 @@ def retry_if_is_error(func, instances=None, retries=3, wait_time=None, raise_exc
     while tries < retries:
         tries += 1
         try:
-            created_result = func()
-            return created_result
+            return func()
         except Exception as e:
             is_valid_error, index = is_errors_instance(
                 errors_only_instances, e)
@@ -249,13 +246,11 @@ def write_file( data, path,):
 
 def read_json(path):
     with open(path, 'r', encoding="utf-8") as fp:
-        data = json.load(fp)
-        return data
+        return json.load(fp)
 
 def read_file(path):
     with open(path, 'r', encoding="utf-8") as fp:
-        content = fp.read()
-        return content
+        return fp.read()
         
 def write_json(data, path,  indent=4):
     with open(path, 'w', encoding="utf-8") as fp:
@@ -264,8 +259,7 @@ def write_json(data, path,  indent=4):
 
 def get_driver_path():
     executable_name = "chromedriver.exe" if is_windows() else "chromedriver"
-    dest_path = f"build/{executable_name}"
-    return dest_path
+    return f"build/{executable_name}"
 
 
 datetime_format = '%Y-%m-%d %H:%M:%S'
@@ -280,6 +274,4 @@ def datetime_to_str(when):
 
 
 def get_current_profile_path(config): 
-    profiles_path = f'profiles/{config.profile}/'
-    # profiles_path =  relative_path(path, 0)
-    return profiles_path
+    return f'profiles/{config.profile}/'

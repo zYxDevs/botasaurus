@@ -50,7 +50,9 @@ def move_driver():
 def download_driver():
     
     recreate_build_dir()
-    print(f'[INFO] Downloading Chrome Driver. This is a one-time process. Download in progress...')
+    print(
+        '[INFO] Downloading Chrome Driver. This is a one-time process. Download in progress...'
+    )
 
     download_driver_in_path()
     move_driver()
