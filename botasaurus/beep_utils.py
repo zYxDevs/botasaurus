@@ -16,10 +16,9 @@ def play_beep():
 def beep_input(prompt, should_beep=True):
     if should_beep:
         play_beep()
-    
+
     try:
-        user_input = input(prompt)
-        return user_input
+        return input(prompt)
     except EOFError:
         print("Input stream closed unexpectedly.")
         # You can choose to return a default value or raise a custom exception here

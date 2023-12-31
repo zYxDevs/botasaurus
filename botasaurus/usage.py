@@ -1,3 +1,3 @@
 class Usage:
-    def put(task_name, url):
+    def put(self, url):
         pass

@@ -54,13 +54,11 @@ class HelperMethodMixin():
         self.execute_script("arguments[0].click();",  element)
     def get_elements_or_none_by_xpath(self: WebDriver, xpath,wait=Wait.SHORT):
         try:
-            if wait is None:
-                return self.find_elements(By.XPATH, xpath)
-            else:
+            if wait is not None:
                 WebDriverWait(self, wait).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, xpath)))
 
-                return self.find_elements(By.XPATH, xpath)
+            return self.find_elements(By.XPATH, xpath)
         except:
             return None
 
@@ -89,10 +87,7 @@ class HelperMethodMixin():
             return Opponent.PERIMETER_X
 
         clf = self.get_element_or_none_by_selector("#challenge-running")
-        if clf is not None:
-            return Opponent.CLOUDFLARE
-
-        return None
+        return Opponent.CLOUDFLARE if clf is not None else None
 
     def is_bot_detected(self):
         return self.get_bot_detected_by() is not None
@@ -130,18 +125,16 @@ class HelperMethodMixin():
 
         return self.get_element_or_none(text, wait)
 
-    def get_element_parent(element):
-        return element.find_element(By.XPATH, "./..")
+    def get_element_parent(self):
+        return self.find_element(By.XPATH, "./..")
 
     def get_elements_or_none_by_selector(self: WebDriver, selector,wait=Wait.SHORT):
         try:
-            if wait is None:
-                return self.find_elements(By.CSS_SELECTOR, selector)
-            else:
+            if wait is not None:
                 WebDriverWait(self, wait).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
 
-                return self.find_elements(By.CSS_SELECTOR, selector)
+            return self.find_elements(By.CSS_SELECTOR, selector)
         except:
             return None
 
@@ -149,43 +142,25 @@ class HelperMethodMixin():
     def text(self: WebDriver, selector: str,   wait=Wait.SHORT):
         el = self.get_element_or_none_by_selector(
                 selector, wait)
-        if el is None:
-            # print(f'Element with selector: "{selector}" not found')
-            return None
-
-        return el.text
+        return None if el is None else el.text
 
     def text_xpath(self: WebDriver, xpath: str,   wait=Wait.SHORT):
         el = self.get_element_or_none(
                 xpath, wait)
-        if el is None:
-            # print(f'Element with selector: "{selector}" not found')
-            return None
-
-        return el.text
+        return None if el is None else el.text
 
     def link(self: WebDriver, selector: str,   wait=Wait.SHORT):
         el = self.get_element_or_none_by_selector(
                 selector, wait)
 
-        if el is None:
-            # print(f'Element with selector: "{selector}" not found')
-
-            return None
-
-        return el.get_attribute("href")
+        return None if el is None else el.get_attribute("href")
 
 
     def exists(self: WebDriver, selector: str,   wait=Wait.SHORT):
         el = self.get_element_or_none_by_selector(
                 selector, wait)
 
-        if el is None:
-            # print(f'Element with selector: "{selector}" not found')
-
-            return False
-
-        return True
+        return el is not None
 
     def scroll(self, selector: str,   wait=Wait.SHORT):
         element = self.get_element_or_none_by_selector(
@@ -259,10 +234,12 @@ window.scrollBy(0, 10000);
 """)
 
     def can_element_be_scrolled(self, element):
-        # <=3 is a fix to handle floating point numbers
-        result = not (self.execute_script(
-            "return Math.abs(arguments[0].scrollTop - (arguments[0].scrollHeight - arguments[0].offsetHeight)) <= 3", element))
-        return result
+        return not (
+            self.execute_script(
+                "return Math.abs(arguments[0].scrollTop - (arguments[0].scrollHeight - arguments[0].offsetHeight)) <= 3",
+                element,
+            )
+        )
 
     def scroll_into_view(self, element):
         return self.execute_script("arguments[0].scrollIntoView()", element)
@@ -277,10 +254,7 @@ window.scrollBy(0, 10000);
 
     def get_cookies_dict(self):
         all_cookies = self.get_cookies()
-        cookies_dict = {}
-        for cookie in all_cookies:
-            cookies_dict[cookie['name']] = cookie['value']
-        return cookies_dict
+        return {cookie['name']: cookie['value'] for cookie in all_cookies}
 
     def get_local_storage_dict(self):
         storage = LocalStorage(self)
@@ -353,16 +327,14 @@ window.scrollBy(0, 10000);
             return link is not None
 
         def is_starts_with(link):
-            if search == None:
-                return True
-            return search in link
+            return True if search is None else search in link
 
         return list(filter(is_starts_with, filter(is_not_none, links)))
 
 
     def execute_file(self, filename, *args):
         if not filename.endswith(".js"):
-            filename = filename + ".js"
+            filename = f"{filename}.js"
         content = read_file(filename)
         return self.execute_script(content, *args)
     def get_images(self, search=None, wait=Wait.SHORT):
@@ -381,9 +353,7 @@ window.scrollBy(0, 10000);
             return link is not None
 
         def is_starts_with(link):
-            if search == None:
-                return True
-            return search in link
+            return True if search is None else search in link
 
         return list(filter(is_starts_with, filter(is_not_none, links)))
 
@@ -392,23 +362,21 @@ window.scrollBy(0, 10000);
         def check_page(driver, target):
             if isinstance(target, str):
                 return target in driver.current_url
-            else:
-                for x in target:
-                    if x in driver.current_url:
-                        return True
-                return False
+            for x in target:
+                if x in driver.current_url:
+                    return True
+            return False
 
         if wait is None:
             return check_page(self, target)
-        else:
-            time = 0
-            while time < wait:
-                if check_page(self, target):
-                    return True
+        time = 0
+        while time < wait:
+            if check_page(self, target):
+                return True
 
-                sleep_time = 0.2
-                time += sleep_time
-                sleep(sleep_time)
+            sleep_time = 0.2
+            time += sleep_time
+            sleep(sleep_time)
 
         if raise_exception:
             raise Exception(f"Page {target} not found")
@@ -418,7 +386,7 @@ window.scrollBy(0, 10000);
         try:
 
             if not filename.endswith(".png"):
-                filename = filename + ".png"
+                filename = f"{filename}.png"
 
             if is_slash_not_in_filename(filename):
                 create_directory_if_not_exists("output/screenshots/")
@@ -427,7 +395,7 @@ window.scrollBy(0, 10000);
                     filename, 0)
             self.get_screenshot_as_file(
                 filename)
-            # print('Saved screenshot at {0}'.format(final_path))
+                # print('Saved screenshot at {0}'.format(final_path))
         except:
             print_exc()
             print('Failed to save screenshot')

@@ -2,8 +2,7 @@ def iterflatten(array, depth=-1):
     """Iteratively flatten a list shallowly or deeply."""
     for item in array:
         if isinstance(item, (list, tuple)) and depth != 0:
-            for subitem in iterflatten(item, depth - 1):
-                yield subitem
+            yield from iterflatten(item, depth - 1)
         else:
             yield item
 

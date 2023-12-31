@@ -23,9 +23,7 @@ def get_chromedriver_filename():
     Returns the filename of the binary for the current platform.
     :return: Binary filename
     """
-    if sys.platform.startswith("win"):
-        return "chromedriver.exe"
-    return "chromedriver"
+    return "chromedriver.exe" if sys.platform.startswith("win") else "chromedriver"
 
 
 def get_variable_separator():
@@ -33,9 +31,7 @@ def get_variable_separator():
     Returns the environment variable separator for the current platform.
     :return: Environment variable separator
     """
-    if sys.platform.startswith("win"):
-        return ";"
-    return ":"
+    return ";" if sys.platform.startswith("win") else ":"
 
 
 def get_platform_architecture(chrome_version=None):
@@ -95,7 +91,7 @@ def get_chromedriver_url(chromedriver_version, download_options, no_ssl=False):
                         return option['url']
     else:  # old ChromeDriver versions use the old urls
         base_url = "chromedriver.storage.googleapis.com/"
-        base_url = "http://" + base_url if no_ssl else "https://" + base_url
+        base_url = f"http://{base_url}" if no_ssl else f"https://{base_url}"
         return base_url + chromedriver_version + "/chromedriver_" + platform + architecture + ".zip"
 
 
@@ -159,28 +155,43 @@ def get_chrome_version():
         # check both of Program Files and Program Files (x86).
         # if the version isn't found on both of them, version is an empty string.
         try:
-            dirs = [f.name for f in os.scandir("C:\\Program Files\\Google\\Chrome\\Application") if f.is_dir() and re.match("^[0-9.]+$", f.name)]
-            if dirs:
+            if dirs := [
+                f.name
+                for f in os.scandir(
+                    "C:\\Program Files\\Google\\Chrome\\Application"
+                )
+                if f.is_dir() and re.match("^[0-9.]+$", f.name)
+            ]:
                 version = max(dirs)
             else:
                 dirs = [f.name for f in os.scandir("C:\\Program Files (x86)\\Google\\Chrome\\Application") if f.is_dir() and re.match("^[0-9.]+$", f.name)]
-                version = max(dirs) if dirs else ''
+                version = max(dirs, default='')
         except:
             try:
-                dirs = [f.name for f in os.scandir("C:\\Program Files (x86)\\Google\\Chrome\\Application") if f.is_dir() and re.match("^[0-9.]+$", f.name)]
-                if dirs:
+                if dirs := [
+                    f.name
+                    for f in os.scandir(
+                        "C:\\Program Files (x86)\\Google\\Chrome\\Application"
+                    )
+                    if f.is_dir() and re.match("^[0-9.]+$", f.name)
+                ]:
                     version = max(dirs)
                 else:
                     dirs = [f.name for f in os.scandir("C:\\Program Files\\Google\\Chrome\\Application") if f.is_dir() and re.match("^[0-9.]+$", f.name)]
-                    version = max(dirs) if dirs else ''
+                    version = max(dirs, default='')
             except:
                 try:
-                    dirs = [f.name for f in os.scandir(f"{os.path.expanduser('~')}\\AppData\\Local\\Google\\Chrome\\Application") if f.is_dir() and re.match("^[0-9.]+$", f.name)]
-                    if dirs:
+                    if dirs := [
+                        f.name
+                        for f in os.scandir(
+                            f"{os.path.expanduser('~')}\\AppData\\Local\\Google\\Chrome\\Application"
+                        )
+                        if f.is_dir() and re.match("^[0-9.]+$", f.name)
+                    ]:
                         version = max(dirs)
                     else:
                         dirs = [f.name for f in os.scandir("C:\\Program Files\\Google\\Chrome\\Application") if f.is_dir() and re.match("^[0-9.]+$", f.name)]
-                        version = max(dirs) if dirs else ''
+                        version = max(dirs, default='')
                 except:
                     raise ValueError("You don't have Google Chrome installed on your Windows system. Please install it by visiting https://www.google.com/chrome/.")
                 if not version:
@@ -241,22 +252,21 @@ def get_matched_chromedriver_version(chrome_version, no_ssl=False):
         except:
             latest_version_per_milestone = json.loads(requests.get(version_url, verify=False).text)
 
-        
-        
-        # Determine if driver download is available for milestone
-        milestone = latest_version_per_milestone['milestones'].get(browser_major_version)
-        if milestone:
+
+
+        if milestone := latest_version_per_milestone['milestones'].get(
+            browser_major_version
+        ):
             try:
                 download_options = milestone['downloads']['chromedriver']
                 return milestone['version'], download_options
             except KeyError:
                 return None, None
-                    
-    # check old versions of chrome using the old system
+
     else:
         version_url = "chromedriver.storage.googleapis.com"
-        version_url = "http://" + version_url if no_ssl else "https://" + version_url
-        
+        version_url = f"http://{version_url}" if no_ssl else f"https://{version_url}"
+
         response = None
         try:
             response = requests.get(version_url)
@@ -269,7 +279,7 @@ def get_matched_chromedriver_version(chrome_version, no_ssl=False):
             root = elemTree.fromstring(doc)
 
         for k in root.iter("{http://doc.s3.amazonaws.com/2006-03-01}Key"):
-            if k.text.find(get_major_version(chrome_version) + ".") == 0:
+            if k.text.find(f"{get_major_version(chrome_version)}.") == 0:
                 # Old system doesn't provide download options so return None
                 return k.text.split("/")[0], None
     return None, None
@@ -372,5 +382,4 @@ def get_filename(major_version):
 
 def get_driver_path():
     executable_name = get_filename(_get_major_version())
-    dest_path = f"build/{executable_name}"
-    return dest_path
+    return f"build/{executable_name}"

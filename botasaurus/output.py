@@ -9,16 +9,14 @@ def is_slash_not_in_filename(filename):
 
 def append_output_if_needed(filename):
     filename = str(filename).strip()
-    if is_slash_not_in_filename(filename):
-        return "output/" +  filename
-    return filename
+    return f"output/{filename}" if is_slash_not_in_filename(filename) else filename
 
 
 def fix_json_filename(filename):
     filename = append_output_if_needed(filename)
 
     if not filename.endswith(".json"):
-        filename = filename + ".json"
+        filename = f"{filename}.json"
     return filename
 
 def read_json(filename):
@@ -43,64 +41,63 @@ def write_json(data, filename, log = True):
         #     return
 
         
-        
-        try:
 
-            filename = append_output_if_needed(filename)
+    try:
 
-            if not filename.endswith(".json"):
-                filename = filename + ".json"
+        filename = append_output_if_needed(filename)
 
-            _write_json(data, filename)
+        if not filename.endswith(".json"):
+            filename = f"{filename}.json"
 
-            if log:
-                print(f"View written JSON file at {filename}")        
-        except PermissionError:
-            prompt(f"{filename} is currently open in another application. Please close the the Application and press 'Enter' to save.")
-            write_json(data, filename, log)
+        _write_json(data, filename)
+
+        if log:
+            print(f"View written JSON file at {filename}")
+    except PermissionError:
+        prompt(f"{filename} is currently open in another application. Please close the the Application and press 'Enter' to save.")
+        write_json(data, filename, log)
 
 def write_temp_json(data, log = True):
-        filename = 'temp'
-        
-        try:
+    filename = 'temp'
 
-            filename = append_output_if_needed(filename)
+    try:
 
-            if not filename.endswith(".json"):
-                filename = filename + ".json"
+        filename = append_output_if_needed(filename)
 
-            _write_json(data, filename)
+        if not filename.endswith(".json"):
+            filename = f"{filename}.json"
 
-            if log:
-                print(f"View written JSON file at {filename}")        
-        except PermissionError:
-            prompt(f"{filename} is currently open in another application. Please close the the Application and press 'Enter' to save.")
-            write_json(data, filename, log)
+        _write_json(data, filename)
+
+        if log:
+            print(f"View written JSON file at {filename}")
+    except PermissionError:
+        prompt(f"{filename} is currently open in another application. Please close the the Application and press 'Enter' to save.")
+        write_json(data, filename, log)
 
 
 def fix_csv_filename(filename):
     filename = append_output_if_needed(filename)
 
     if not filename.endswith(".csv"):
-        filename = filename + ".csv"
+        filename = f"{filename}.csv"
     return filename
 
 def read_csv(filename):
-        """
+    """
         Reads a CSV file and returns a list of dictionaries.
 
         :param filepath: str, the path to the CSV file
         :return: list of dictionaries
         """
 
-        filename = fix_csv_filename(filename)
+    filename = fix_csv_filename(filename)
 
-        data = []
-        with open(filename, mode='r') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                data.append(row)
-        return data
+    data = []
+    with open(filename, mode='r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        data.extend(iter(reader))
+    return data
 
 def get_fieldnames(data_list):
     fieldnames = []
@@ -111,8 +108,8 @@ def get_fieldnames(data_list):
     return fieldnames
 
 def write_csv(data, filename, log = True):
-        
-        """
+
+    """
         Save a list of dictionaries as a CSV file.
 
         Args:
@@ -120,36 +117,30 @@ def write_csv(data, filename, log = True):
             filename: the name of the CSV file to save
         """
         
-        if type(data) is dict:
-            data = [data]
+    if type(data) is dict:
+        data = [data]
 
 
 
-        filename_new = append_output_if_needed(filename)
+    filename_new = append_output_if_needed(filename)
 
-        
-        if not filename_new.endswith(".csv"):
-            filename_new = filename_new + ".csv"
 
-        # if data is None or len(data) == 0:
-            # if log:
-            # print("No CSV File written as data list is empty.")
-            # print("Data is empty.")
-            # return
+    if not filename_new.endswith(".csv"):
+        filename_new = f"{filename_new}.csv"
 
-        try:
-            with open(filename_new, 'w', newline='', encoding='utf-8') as csvfile:
-                # fieldnames = data[0].keys()  # get the fieldnames from the first dictionary
-                fieldnames = get_fieldnames(data)
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()  # write the header row
-                writer.writerows(data)  # write each row of data
-            if log:
-                print(f"View written CSV file at {filename_new}")     
+    try:
+        with open(filename_new, 'w', newline='', encoding='utf-8') as csvfile:
+            # fieldnames = data[0].keys()  # get the fieldnames from the first dictionary
+            fieldnames = get_fieldnames(data)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()  # write the header row
+            writer.writerows(data)  # write each row of data
+        if log:
+            print(f"View written CSV file at {filename_new}")     
 
-        except PermissionError:
-            prompt(f"{filename_new} is currently open in another application (e.g., Excel). Please close the the Application and press 'Enter' to save.")
-            write_csv(data, filename, log)
+    except PermissionError:
+        prompt(f"{filename_new} is currently open in another application (e.g., Excel). Please close the the Application and press 'Enter' to save.")
+        write_csv(data, filename, log)
 
 
 def save_image(url, filename = None):
@@ -171,23 +162,23 @@ def save_image(url, filename = None):
             return path
         
 def write_html(data, filename, log = True):
-        filename = append_output_if_needed(filename)
+    filename = append_output_if_needed(filename)
 
-        if not filename.endswith(".html"):
-            filename = filename + ".html"
+    if not filename.endswith(".html"):
+        filename = f"{filename}.html"
 
-        _write_html(data, filename)
-        if log:        
-            print(f"View written HTML file at {filename}")
+    _write_html(data, filename)
+    if log:        
+        print(f"View written HTML file at {filename}")
 
 
 def read_html(filename):
-        filename = append_output_if_needed(filename)
+    filename = append_output_if_needed(filename)
 
-        if not filename.endswith(".html"):
-            filename = filename + ".html"
+    if not filename.endswith(".html"):
+        filename = f"{filename}.html"
 
-        return _read_file(filename)
+    return _read_file(filename)
 
 
 def write_file(data, filename, log = True):

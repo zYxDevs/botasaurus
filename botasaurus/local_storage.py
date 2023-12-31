@@ -43,9 +43,7 @@ class JSONStorageBackend(BasicStorageBackend):
             json.dump(self.json_data, json_file, indent=4)
 
     def get_item(self, key: str, default = None) -> str:
-        if key in self.json_data:
-            return self.json_data[key]
-        return default
+        return self.json_data[key] if key in self.json_data else default
 
 
     def items(self):

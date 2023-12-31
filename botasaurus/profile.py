@@ -43,9 +43,7 @@ class JSONStorageBackend(BasicStorageBackend):
             json.dump(self.json_data, json_file, indent=4)
 
     def get_item(self, key: str, default = None) -> str:
-        if key in self.json_data:
-            return self.json_data[key]
-        return default
+        return self.json_data[key] if key in self.json_data else default
 
     def items(self):
         return self.json_data
@@ -86,10 +84,7 @@ class _Profile:
         self.check_profile()
         profile = self.storage_backend_instance.get_item(self.profile, {})
 
-        if default is None:
-            return profile.get(item)
-        else: 
-            return profile.get(item, default)
+        return profile.get(item) if default is None else profile.get(item, default)
 
     def set_item(self, item: str, value: any) -> None:
         self.check_profile()
@@ -126,15 +121,15 @@ class _Profile:
     
     def get_profiles(self, random = False):
         data = list(self.storage_backend_instance.items().values())
-        
-        if len(data) == 0:
+
+        if not data:
             return data
 
         if (data[0].get('created_at') is None):
             if random:
                 random_module.shuffle(data)
             return data
-        
+
         if random:
             random_module.shuffle(data)
         else: 

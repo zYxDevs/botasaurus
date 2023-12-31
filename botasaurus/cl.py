@@ -148,10 +148,7 @@ def extract_numbers(s):
         # Convert the extracted strings to floats or integers
         return [float(num) if "." in num else int(num) for num in numbers]
 
-    if isinstance(s, int) or isinstance(s, float):
-        return [s]
-
-    return []
+    return [s] if isinstance(s, (int, float)) else []
 
 
 def extract_number(s):
@@ -163,7 +160,7 @@ def extract_number(s):
             [float(num) if "." in num else int(num) for num in numbers], 0, max_depth=1
         )
 
-    if isinstance(s, int) or isinstance(s, float):
+    if isinstance(s, (int, float)):
         return s
 
 def extract_links(s):
@@ -183,9 +180,7 @@ def extract_emails(s):
 
 
 def extract_otps(s):
-    if isinstance(s, str):
-        return re.findall(r"\b\d{4,6}\b", s)
-    return []
+    return re.findall(r"\b\d{4,6}\b", s) if isinstance(s, str) else []
 
 
 def is_email_verification_link(link):
@@ -296,7 +291,7 @@ def join_link(link, path=None, query_params=None):
 
 
 def join_dicts(*dicts):
-    if len(dicts) == 0:
+    if not dicts:
         return {}
 
     def merge_dicts_in_one_dict(*dicts):
@@ -355,9 +350,7 @@ def filter_links_by_path(links, path):
     if len(links) == 0:
         return []
 
-    if isinstance(links[0], dict):
-        return [link for link in links if link_matches_path(link, path)]
-    elif isinstance(links[0], str):
+    if isinstance(links[0], (dict, str)):
         return [link for link in links if link_matches_path(link, path)]
 
 
@@ -365,7 +358,7 @@ def pluralize(word, items):
     if word is None or items is None:
         return None
 
-    return word if len(items) <= 1 else word + "s"
+    return word if len(items) <= 1 else f"{word}s"
 
 
 def flatten_list(list_of_lists):
@@ -434,99 +427,7 @@ def base64_decode(encoded_str):
     """
     # Decoding the base64 encoded string
     decoded_bytes = b64decode(encoded_str)
-    # Converting the bytes to string
-    decoded_str = decoded_bytes.decode("utf-8")
-
-    return decoded_str
+    return decoded_bytes.decode("utf-8")
 
 
 # python src/cleaner.py
-if __name__ == "__main__":
-    # print(select({"a":['a', 'b']},"a",-2, default="Hello"))
-    # ---
-    # from bs4 import BeautifulSoup
-
-    # # Sample HTML content
-    # html_content = """
-    # <html>
-    # <head>
-    #     <title>Test Page</title>
-    # </head>
-    # <body>
-    #     <script type="application/ld+json">
-    #         {
-    #             "name": "Example",
-    #             "description": "This is an example.",
-    #             "url": "http://example.com"
-    #         }
-    #     </script>
-    #     <script type="application/ld+json">
-    #         {
-    #             "name": "Test",
-    #             "description": "This is a test.",
-    #             "additionalInfo": "More info here."
-    #         }
-    #     </script>
-    # </body>
-    # </html>
-    # """
-
-    # # Parse HTML with BeautifulSoup
-    # soup = BeautifulSoup(html_content, 'html.parser')
-
-    # # Function to test various filters
-    # def test_extract_ld_json(filter):
-    #     results = extract_ld_json(soup, filter)
-    #     print("Filter:", filter)
-    #     print("Results:", results)
-    #     print("-----\n")
-
-    # # Test with a string filter
-    # test_extract_ld_json("url")
-
-    # # Test with an iterable filter
-    # test_extract_ld_json(("name", "Test"))
-
-    # # Test with a function filter
-    # test_extract_ld_json(lambda ld_json: "additionalInfo" in ld_json and ld_json["additionalInfo"] == "More info here.")
-
-    # # Ensure the extract_ld_json function is defined as previously described
-
-    # ---
-
-    # # Example dictionary
-    # original_dict = {
-    #     "name": "John Doe",
-    #     "country": "USA",
-    #     "age": 30,
-
-    # }
-
-    # # Renaming map
-    # renaming_map = {
-    #     "name": "name",
-    #     "age": "years"
-    # }
-
-    # # Test the function
-    # renamed_dict = rename_keys(original_dict, renaming_map)
-
-    # print("Original Dictionary:", original_dict)
-    # print("Renamed Dictionary:", renamed_dict)
-
-    # ---
-
-    # sorted_obj = sort_object_by_keys({
-    #     "sun": [],
-    #     "mon": [{"close_time": "00:00:00", "open_time": "11:30:00"}],
-    #     "tue": [{"close_time": "00:00:00", "open_time": "11:30:00"}],
-    #     "wed": [{"close_time": "00:00:00", "open_time": "11:30:00"}],
-    #     "thu": [{"close_time": "00:00:00", "open_time": "11:30:00"}],
-    #     "fri": [{"close_time": "01:00:00", "open_time": "11:30:00"}],
-    #     "sat": [{"close_time": "01:00:00", "open_time": "11:30:00"}]
-    # }, 'sun', reverse=True)
-
-    # print(sorted_obj)
-
-    # ---
-    pass

@@ -64,10 +64,7 @@ def find_ip_details(max_retries=5, proxy=None):
         return data
 
     except requests.exceptions.ReadTimeout:
-        if max_retries > 0:
-            return find_ip_details(max_retries - 1, proxy)
-        else:
-            return None
+        return find_ip_details(max_retries - 1, proxy) if max_retries > 0 else None
     except Exception as e:
         return None
 

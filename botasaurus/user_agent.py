@@ -136,11 +136,20 @@ class UserAgent(BaseData):
         _95 = [self.user_agent_95] * V_95
         _94 = [self.user_agent_94] * V_94
 
-        result = (
-            _106 + _105 + _104 + _103 + _101 + _99 + _100 + _98 + _97 + _96 + _95 + _94
+        return (
+            _106
+            + _105
+            + _104
+            + _103
+            + _101
+            + _99
+            + _100
+            + _98
+            + _97
+            + _96
+            + _95
+            + _94
         )
-
-        return result
 
 
 UserAgentInstance = UserAgent()

@@ -38,8 +38,7 @@ def add_useragent(options, user_agent):
 def create_profile_path(user_id):
     PROFILES_PATH = 'profiles'
     PATH = f'{PROFILES_PATH}/{user_id}'
-    path = relative_path(PATH, 0)
-    return path
+    return relative_path(PATH, 0)
 
 
 def delete_corrupted_files(user_id):
@@ -63,18 +62,17 @@ def delete_profile_path(user_id):
 def add_essential_options(options, profile, window_size, user_agent):
     options.add_argument("--start-maximized")
     if window_size != WindowSize.REAL:
-        if window_size == None:
-            if profile == None:
-                window_size = WindowSizeInstance.get_random()
-            else:
-                window_size = WindowSizeInstance.get_hashed(profile)
+        if (
+            window_size is None
+            and profile is None
+            or window_size != None
+            and window_size == WindowSize.RANDOM
+        ):
+            window_size = WindowSizeInstance.get_random()
+        elif window_size is None or window_size == WindowSize.HASHED:
+            window_size = WindowSizeInstance.get_hashed(profile)
         else:
-            if window_size == WindowSize.RANDOM:
-                window_size = WindowSizeInstance.get_random()
-            elif window_size == WindowSize.HASHED:
-                window_size = WindowSizeInstance.get_hashed(profile)
-            else:
-                window_size = window_size
+            window_size = window_size
 
         window_size = WindowSize.window_size_to_string(window_size)
         options.add_argument(f"--window-size={window_size}")
@@ -83,18 +81,17 @@ def add_essential_options(options, profile, window_size, user_agent):
         profile = str(profile)
 
     if user_agent != UserAgent.REAL:
-        if user_agent == None:
-            if profile == None:
-                user_agent = UserAgentInstance.get_random()
-            else:
-                user_agent = UserAgentInstance.get_hashed(profile)
+        if (
+            user_agent is None
+            and profile is None
+            or user_agent != None
+            and user_agent == UserAgent.RANDOM
+        ):
+            user_agent = UserAgentInstance.get_random()
+        elif user_agent is None or user_agent == UserAgent.HASHED:
+            user_agent = UserAgentInstance.get_hashed(profile)
         else:
-            if user_agent == UserAgent.RANDOM:
-                user_agent = UserAgentInstance.get_random()
-            elif user_agent == UserAgent.HASHED:
-                user_agent = UserAgentInstance.get_hashed(profile)
-            else:
-                user_agent = user_agent
+            user_agent = user_agent
 
         add_useragent(options, user_agent)
 
@@ -131,9 +128,7 @@ def is_docker():
 
 
 def get_current_profile_path(profile): 
-    profiles_path = f'profiles/{profile}/'
-    # profiles_path =  relative_path(path, 0)
-    return profiles_path
+    return f'profiles/{profile}/'
 
 # Possible states for driver download
 NOT_DOWNLOADED = 0
@@ -171,17 +166,17 @@ def do_download_driver():
 #     download_driver()
 
 def save_cookies(driver, profile):
-            current_profile_data = get_current_profile_path(profile) + 'profile.json'
-            current_profile_data_path =  relative_path(current_profile_data, 0)
+    current_profile_data = f'{get_current_profile_path(profile)}profile.json'
+    current_profile_data_path =  relative_path(current_profile_data, 0)
 
-            driver._enable_network()
-            # execute_cdp_cmd('Network.enable', {})
-            cookies = (driver.execute_cdp_cmd('Network.getAllCookies', {}))
-            # driver.execute_cdp_cmd('Network.disable', {})
+    driver._enable_network()
+    # execute_cdp_cmd('Network.enable', {})
+    cookies = (driver.execute_cdp_cmd('Network.getAllCookies', {}))
+    # driver.execute_cdp_cmd('Network.disable', {})
 
-            if type(cookies) is not list:
-                cookies = cookies.get('cookies')
-            write_json(cookies, current_profile_data_path)
+    if type(cookies) is not list:
+        cookies = cookies.get('cookies')
+    write_json(cookies, current_profile_data_path)
 
 
 def load_cookies(driver: AntiDetectDriver, profile):
@@ -191,7 +186,7 @@ def load_cookies(driver: AntiDetectDriver, profile):
     if not os.path.exists(current_profile_path):
         os.makedirs(current_profile_path)
 
-    current_profile_data = get_current_profile_path(profile) + 'profile.json'
+    current_profile_data = f'{get_current_profile_path(profile)}profile.json'
     current_profile_data_path = relative_path(current_profile_data, 0)
 
     if not os.path.isfile(current_profile_data_path):
@@ -253,77 +248,76 @@ def add_about(tiny_profile, proxy, lang, beep, driver_attributes, driver):
 
 def do_create_driver(tiny_profile, profile, window_size, user_agent, proxy, is_eager, headless, lang, block_resources, block_images, beep):
 
-        if tiny_profile and profile is None:
-            raise Exception('Profile must be given when using tiny profile')
+    if tiny_profile and profile is None:
+        raise Exception('Profile must be given when using tiny profile')
 
-        options = Options()
+    options = Options()
 
-        if is_gitpod_environment():
-            # todo: Maybe need to add check to see running in ec2/gcp then I need to also add this or we can make this an error based option add on
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--headless=new')
-        elif is_docker():
-            options.add_argument('--no-sandbox')
-            options.add_argument('--headless=new')
-            # options.add_argument('--disable-setuid-sandbox')
-        else:
-            if headless:
-                options.add_argument('--headless=new')
+    if is_gitpod_environment():
+        # todo: Maybe need to add check to see running in ec2/gcp then I need to also add this or we can make this an error based option add on
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--headless=new')
+    elif is_docker():
+        options.add_argument('--no-sandbox')
+        options.add_argument('--headless=new')
+        # options.add_argument('--disable-setuid-sandbox')
+    elif headless:
+        options.add_argument('--headless=new')
 
-        if lang is not None:
-            options.add_argument(f'--lang={lang}')
+    if lang is not None:
+        options.add_argument(f'--lang={lang}')
 
-        driver_attributes = add_essential_options(
-            options, None if tiny_profile else profile, window_size, user_agent)
-        
-        hide_automation_bar(options)
+    driver_attributes = add_essential_options(
+        options, None if tiny_profile else profile, window_size, user_agent)
 
-        
+    hide_automation_bar(options)
 
 
-        # Necessary Options
-        # options.add_argument("--ignore-certificate-errors")
-        # options.add_argument("--disable-extensions")
-
-        # Captch Options
-        # if proxy:
-        #     options.add_argument("--disable-web-security")
-        #     options.add_argument("--disable-application-cache")
-
-        # GOOD option
-        options.add_argument("--disable-site-isolation-trials")
-        
-        
-        desired_capabilities = get_eager_strategy() if is_eager  else None
-
-        path = relative_path(get_driver_path(), 0)
-
-        driver = create_selenium_driver(proxy, options, desired_capabilities, path)
-        driver_attributes['profile'] = profile
-        # print(driver_attributes)
 
 
-        default_patterns = []
+    # Necessary Options
+    # options.add_argument("--ignore-certificate-errors")
+    # options.add_argument("--disable-extensions")
 
-        if block_resources is True:
-            default_patterns.extend(DEFAULT_BLOCKED_RESOURCES)
-        elif isinstance(block_resources, list):
-            default_patterns.extend(block_resources)
+    # Captch Options
+    # if proxy:
+    #     options.add_argument("--disable-web-security")
+    #     options.add_argument("--disable-application-cache")
 
-        if block_images:
-            # Adding only unique elements from DEFAULT_BLOCKED_RESOURCES_EXCEPT_CSS
-            for resource in DEFAULT_BLOCKED_RESOURCES_EXCEPT_CSS:
-                if resource not in default_patterns:
-                    default_patterns.append(resource)
-
-        if default_patterns:
-            default_patterns = list(dict.fromkeys(default_patterns))
-            driver._enable_network()  # Assuming this method is correctly defined in the driver
-            driver.execute_cdp_cmd('Network.setBlockedURLs', {"urls": default_patterns})
+    # GOOD option
+    options.add_argument("--disable-site-isolation-trials")
 
 
-        add_about(tiny_profile, proxy, lang, beep, driver_attributes, driver)
-        return driver
+    desired_capabilities = get_eager_strategy() if is_eager  else None
+
+    path = relative_path(get_driver_path(), 0)
+
+    driver = create_selenium_driver(proxy, options, desired_capabilities, path)
+    driver_attributes['profile'] = profile
+    # print(driver_attributes)
+
+
+    default_patterns = []
+
+    if block_resources is True:
+        default_patterns.extend(DEFAULT_BLOCKED_RESOURCES)
+    elif isinstance(block_resources, list):
+        default_patterns.extend(block_resources)
+
+    if block_images:
+        # Adding only unique elements from DEFAULT_BLOCKED_RESOURCES_EXCEPT_CSS
+        for resource in DEFAULT_BLOCKED_RESOURCES_EXCEPT_CSS:
+            if resource not in default_patterns:
+                default_patterns.append(resource)
+
+    if default_patterns:
+        default_patterns = list(dict.fromkeys(default_patterns))
+        driver._enable_network()  # Assuming this method is correctly defined in the driver
+        driver.execute_cdp_cmd('Network.setBlockedURLs', {"urls": default_patterns})
+
+
+    add_about(tiny_profile, proxy, lang, beep, driver_attributes, driver)
+    return driver
 
 
 

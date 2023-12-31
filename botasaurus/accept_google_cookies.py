@@ -8,7 +8,7 @@ def verify_cookies(driver):
 
         time = 0
         WAIT = 8
-        
+
         while time < WAIT:
                 if check_page():
                     return True
@@ -17,16 +17,13 @@ def verify_cookies(driver):
                 time += sleep_time
                 sleep(sleep_time)
 
-        raise Exception(f"Unable to consent Cookies")
+        raise Exception("Unable to consent Cookies")
 
 def accept_google_cookies(driver):
-                input_el = driver.get_element_or_none_by_selector('[role="combobox"], [role="search"]', 16)
-                if input_el is None:
-                    raise Exception("Unabe to load Google")
-                else:
-                    accept_cookies_btn = driver.get_element_or_none_by_selector("button#L2AGLb", None)
-                    if accept_cookies_btn is None:
-                        pass
-                    else:
-                        accept_cookies_btn.click()
-                        verify_cookies(driver)    
+        input_el = driver.get_element_or_none_by_selector('[role="combobox"], [role="search"]', 16)
+        if input_el is None:
+                raise Exception("Unabe to load Google")
+        accept_cookies_btn = driver.get_element_or_none_by_selector("button#L2AGLb", None)
+        if accept_cookies_btn is not None:
+                accept_cookies_btn.click()
+                verify_cookies(driver)    
