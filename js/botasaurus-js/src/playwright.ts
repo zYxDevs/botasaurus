@@ -31,7 +31,41 @@ import {
 import { FormatType } from "./formats";
 import { createPlaywrightChrome, PlaywrightChrome } from "./page";
 import { getBotasaurusStorage } from "./botasaurus-storage"
-import { determineMaxLimit, drainQueue, getItemRepr, removeItemFromSeenItemsSet, TaskRunOptions } from "./task"
+import { determineMaxLimit, drainQueue, removeItemFromSeenItemsSet, TaskRunOptions, getUniqueItems, __SKIP__ } from "./task"
+
+// Global Set to track all active Chrome instances
+const globalChromes = new Set<PlaywrightChrome>();
+
+// Global function to close all tracked Chromes (fire-and-forget, returns promises)
+function closeAllChromes(): Promise<void>[] {
+    const promises: Promise<void>[] = [];
+    
+    for (const chrome of globalChromes) {
+        const promise = chrome.close()
+            .then(() => {
+                globalChromes.delete(chrome);
+            })
+            .catch(() => {
+                // ignore errors, still remove from set
+                globalChromes.delete(chrome);
+            });
+        
+        promises.push(promise);
+    }
+    
+    return promises;
+}
+
+// @ts-ignore
+global.closeAllChromes = closeAllChromes;
+
+// Close all Chrome instances on process exit
+// Only use 'exit' event - it fires when process is already exiting (from any cause)
+// Don't register SIGINT/SIGTERM handlers here as they would interfere with 
+// Electron's or other modules' shutdown handlers
+process.on('exit', () => {
+    closeAllChromes();
+});
 
 
 
@@ -82,6 +116,7 @@ type PlaywrightOptions<I> = {
 const closeDriver = async (driver: PlaywrightChrome | null) => {
     try {
         if (driver) {
+            globalChromes.delete(driver);
             await driver.close();
         }
     } catch (error) {
@@ -188,8 +223,8 @@ function createPlaywright<I>(
                 } else if (reuseDriver && _driverPool.length > 0) {
                     driver = (_driverPool.pop() || null) as PlaywrightChrome;
                 } else {
-                    // MAKE ONE HERE ADD
                     driver = await createPlaywrightChrome(evaluated_headless, evaluated_userAgent);
+                    globalChromes.add(driver);
                 }
 
                 if (maxRetry !== undefined && maxRetry !== null) {
@@ -395,7 +430,7 @@ export function playwright<I = any>(options: PlaywrightOptions<I>) {
 }
 
 export function playwrightQueue<I = any>(
-    options: PlaywrightOptions<I> & { sequential?: boolean }
+    options: PlaywrightOptions<I> & { sequential?: boolean, skipDuplicateInput?: boolean }
 ) {
     // Extract parallel from options - it controls queue-level concurrency, not passed to createPlaywright
     const { parallel: parallelOption, ...playwrightOptions } = options
@@ -405,6 +440,7 @@ export function playwrightQueue<I = any>(
         let lastPromise: Promise<any> = Promise.resolve();
         const state = { promises: [] as any[], draining: false };
         let sequential = "sequential" in options ? options.sequential : false;
+        const skipDuplicateInput = options.skipDuplicateInput ?? false;
         
         // Create concurrency limiter for parallel mode
         const maxLimit = determineMaxLimit(parallelOption)
@@ -414,27 +450,6 @@ export function playwrightQueue<I = any>(
             sequential = true
         } else {
             limit = pLimit(maxLimit)
-        }
-
-        function getUnique(items: any[]) {
-            let singleItem = false;
-            if (!Array.isArray(items)) {
-                items = [items];
-                singleItem = true;
-            }
-
-            let newItems = [];
-
-            for (let item of items) {
-                const itemRepr = getItemRepr(item);
-
-                if (!seenItems.has(itemRepr)) {
-                    newItems.push(item);
-                    seenItems.add(itemRepr);
-                }
-            }
-
-            return singleItem && newItems.length ? newItems[0] : newItems;
         }
 
         const cleanup = () => {
@@ -449,7 +464,16 @@ export function playwrightQueue<I = any>(
                 data: any,
                 overrideOptions: Omit<PlaywrightOptions<any>, "run"> = {}
             ) {
-                const uniqueData = getUnique(data);
+                const uniqueData = getUniqueItems(data, skipDuplicateInput, seenItems);
+                
+                // Handle case when all items are duplicates (skipDuplicateInput=true)
+                if (uniqueData === __SKIP__) {
+                    return Promise.resolve(null);
+                }
+                if (Array.isArray(uniqueData) && uniqueData.length === 0) {
+                    return Promise.resolve([]);
+                }
+                
                 let promise: Promise<any>;
                 if (sequential) {
                     // runs sequentially

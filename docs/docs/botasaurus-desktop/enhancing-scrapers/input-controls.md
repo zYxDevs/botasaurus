@@ -231,6 +231,10 @@ When `canBulkAdd` is enabled, a button appears below the multi-select control al
 ### `checkbox`
 A Boolean checkbox. Defaults to `false` if no `defaultValue` is provided.
 
+:::warning
+Do not use `checkbox` to reveal hidden controls via [isShown](#isshown). This is an anti-pattern. Use [`switch`](#switch) instead for toggling visibility of other controls.
+:::
+
 **Example**
 ```ts
 .checkbox("include_reviews", {
@@ -251,7 +255,9 @@ A multi-line text field.
 ### `switch`
 A Boolean toggle switch (an alternative to `checkbox`). Defaults to `false` if no `defaultValue` is provided.
 
-Use `switch` instead of `checkbox` when the toggle is meant to reveal hidden controls via [isShown](#isshown). For example, showing **Advanced Settings**.
+:::tip[Best Practice]
+Use `switch` instead of `checkbox` when the toggle is meant to reveal hidden controls via [isShown](#isshown). For example, showing **Advanced Settings**. Using `checkbox` for this purpose is an anti-pattern.
+:::
 
 **Example**
 ```ts

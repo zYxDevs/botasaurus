@@ -43,14 +43,18 @@ The process involves two main steps:
 
    I recommend these registrars:
 
-   - **Cloudflare Domains** - Cheapest option (offers at-cost pricing, charging only the ICANN registry fees with no markup)
+   - **Cloudflare Domains** - Most Cheapest option (offers at-cost pricing, charging only the ICANN registry fees with no markup)
    - **Porkbun** - Second cheapest option
 
-   Avoid GoDaddy and Namecheap. 
-    - Although their initial registration costs are low, their renewal prices are significantly higher than Porkbun and Cloudflare Domains. Therefore, it is unwise to buy from them.
-    - Also, do not even search for a domain on GoDaddy. They may purchase the domain themselves and then offer it to you at a much higher price.
 
-   I personally use Porkbun because it offers automatic renewals 45 days before expiry and sends multiple renewal reminders (45 days and 30 days before expiry), so I don't forget to renew my domains.
+   Avoid GoDaddy and Namecheap:
+   - Like HP/Canon with printers and ink, they follow the [Razor and Blades](https://www.investopedia.com/terms/r/razor-razorblademodel.asp) pricing model. Their domain registration costs are low, but their renewal prices are significantly higher than Porkbun and Cloudflare Domains. It is unwise to buy from them.
+   - Also, do not even search for a domain on GoDaddy. They may purchase the domain themselves and then offer it to you at a much higher price.
+
+   I use Porkbun because:
+   - Unlike Cloudflare Domains, which is primarily a CDN provider, Porkbun specializes in domain registration. I want a specialist to manage my domains.
+   - It offers automatic renewals.
+   - It sends multiple renewal reminders (45 days and 30 days before expiry), so I don't forget to renew my domains.
 
    ![Porkbun Renewal Emails](https://raw.githubusercontent.com/omkarcloud/botasaurus/master/images/domains/porkbun-renewal-emails.png)
 

@@ -246,6 +246,43 @@ export function getItemRepr(item: any): string | number {
     }
 }
 
+export const __SKIP__ = Symbol('__SKIP__')
+
+export function getUniqueItems(
+    items: any,
+    skipDuplicateInput: boolean,
+    seenItems: Set<any>
+): any {
+    let singleItem: boolean = false
+    if (!Array.isArray(items)) {
+        items = [items]
+        singleItem = true
+    }
+
+    // If skipDuplicateInput is false, return as-is (no deduplication)
+    if (!skipDuplicateInput) {
+        return singleItem ? items[0] : items
+    }
+
+    // Deduplication logic (only when skipDuplicateInput is true)
+    const newItems: any[] = []
+
+    for (const item of items) {
+        const itemRepr = getItemRepr(item)
+
+        if (!seenItems.has(itemRepr)) {
+            newItems.push(item)
+            seenItems.add(itemRepr)
+        }
+    }
+    
+    if (!newItems.length && singleItem) {
+        return __SKIP__
+    }
+
+    return singleItem && newItems.length ? newItems[0] : newItems
+}
+
 export function removeItemFromSeenItemsSet(items: any, seenItems: Set<any>) {
     if (!Array.isArray(items)) {
         items = [items]
@@ -255,7 +292,7 @@ export function removeItemFromSeenItemsSet(items: any, seenItems: Set<any>) {
         seenItems.delete(itemRepr)
     }
 }
-export function taskQueue<I=any>(options: TaskOptions<I>& { sequential?: boolean }) {
+export function taskQueue<I=any>(options: TaskOptions<I>& { sequential?: boolean, skipDuplicateInput?: boolean }) {
     // Extract parallel from options - it controls queue-level concurrency, not passed to createTask
     const { parallel: parallelOption, ...taskOptions } = options
     const run = createTask<I>(taskOptions as TaskOptions<I>, true)
@@ -264,6 +301,7 @@ export function taskQueue<I=any>(options: TaskOptions<I>& { sequential?: boolean
         let lastPromise: Promise<any> = Promise.resolve()
         const state = { promises: [] as any[], draining: false }
         let sequential = 'sequential' in options ? options.sequential : false
+        const skipDuplicateInput = options.skipDuplicateInput ?? false
         
         // Create concurrency limiter for parallel mode
         const maxLimit = determineMaxLimit(parallelOption)
@@ -277,27 +315,6 @@ export function taskQueue<I=any>(options: TaskOptions<I>& { sequential?: boolean
 
 
 
-        function getUnique(items: any[]) {
-            let singleItem = false
-            if (!Array.isArray(items)) {
-                items = [items]
-                singleItem = true
-            }
-
-            let newItems = []
-
-            for (let item of items) {
-                const itemRepr = getItemRepr(item)
-
-                if (!seenItems.has(itemRepr)) {
-                    newItems.push(item)
-                    seenItems.add(itemRepr)
-                }
-            }
-
-            return singleItem && newItems.length ? newItems[0] : newItems
-        }
-
         const cleanup = () => {
             state.promises = []
             state.draining = false
@@ -307,7 +324,16 @@ export function taskQueue<I=any>(options: TaskOptions<I>& { sequential?: boolean
 
         return {
             put: function (data: any, overrideOptions: Omit<TaskOptions<any>, 'run'> = {}) {
-                const uniqueData = getUnique(data)
+                const uniqueData = getUniqueItems(data, skipDuplicateInput, seenItems)
+                
+                // Handle case when all items are duplicates (skipDuplicateInput=true)
+                if (uniqueData === __SKIP__) {
+                    return Promise.resolve(null)
+                }
+                if (Array.isArray(uniqueData) && uniqueData.length === 0) {
+                    return Promise.resolve([])
+                }
+                
                 let promise: Promise<any> 
                 if (sequential) {
                     // runs sequentially

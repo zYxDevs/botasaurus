@@ -787,15 +787,24 @@ async function executeGetTasks(queryParams: Record<string, any>): Promise<any> {
     // sort than filters, maintain correct order for < 25 page limit
     results = applySorts(results, sort, Server.getSorts(scraper_name));
     results = applyFiltersInPlace(results, filters, Server.getFilters(scraper_name));
-    const [cleanedResults, hidden_fields] = _applyViewForUi(
+    
+    if (filters) {
+      result_count = results.length;
+    }
+    
+    const start = calculatePageStart(page, per_page ?? 25);
+    const end = calculatePageEnd(start, per_page ?? 25);
+    
+    const [cleanedResults, hidden_fields, total_items_count] = _applyViewForUi(
       results,
       view,
       Server.getViews(scraper_name),
-      inputData
+      inputData,
+      { start, end, containsListField }
     );
   
-    if (containsListField || filters) {
-      result_count = cleanedResults.length;
+    if (containsListField) {
+      result_count = total_items_count;
     }
   
     const paginatedResults = applyPagination(
@@ -803,7 +812,8 @@ async function executeGetTasks(queryParams: Record<string, any>): Promise<any> {
       page,
       per_page,
       hidden_fields as any,
-      result_count
+      result_count,
+      false
     );
   
     return paginatedResults;
@@ -953,7 +963,8 @@ async function performGetTaskResults(taskId: number): Promise<[string, boolean, 
         cleanedResults,
         view as any,
         views,
-        inputData
+        inputData,
+        undefined
       );
     
       if (convertToEnglish) {

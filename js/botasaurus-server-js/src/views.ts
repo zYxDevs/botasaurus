@@ -335,12 +335,6 @@ function transformRecord(targetFields: (Field | CustomField | ExpandDictField | 
     return expandedRecords
 }
 
-function performApplyViewInPlace(results: any[], viewObj: View, inputData?: any): [any[], string[]] {
-    const hidden_fields: string[] = [];
-    const targetFields: (Field | CustomField | ExpandDictField | ExpandListField)[] = isNotNullish(inputData)?getFields(viewObj.fields, inputData, hidden_fields):viewObj.fields
-    const processedResults: any[] = transformRecordsInPlace(results, targetFields)
-    return [processedResults, hidden_fields];
-}
 function performApplyView(results: any[], viewObj: View, inputData?: any): [any[], string[]] {
     const hidden_fields: string[] = [];
     const targetFields: (Field | CustomField | ExpandDictField | ExpandListField)[] = isNotNullish(inputData)?getFields(viewObj.fields, inputData, hidden_fields):viewObj.fields
@@ -355,15 +349,78 @@ function findView(views: View[], view: string): View | undefined {
     return views.find(v => v.id === view);
 }
 
-function _applyViewForUi(results: any[], view: string, views: View[], inputData: any): [any[], string[]] {
-
+function _applyViewForUi(
+    results: any[], 
+    view: string, 
+    views: View[], 
+    inputData: any,
+    pagination?: { start: number; end: number; containsListField: boolean }
+): [any[], string[], number] {
     const foundView = view && views.find(v => v.id === view);
     if (foundView) {
-        return performApplyViewInPlace(results, foundView, inputData);
+        const hidden_fields: string[] = [];
+        const targetFields = isNotNullish(inputData) 
+            ? getFields(foundView.fields, inputData, hidden_fields) 
+            : foundView.fields;
+        
+        if (pagination) {
+            const { start, end, containsListField } = pagination;
+            if (containsListField) {
+                // Need to count all expanded items, but only keep items in range
+                const result: any[] = [];
+                let items_count = 0;
+                for (let i = 0; i < results.length; i++) {
+                    const record = results[i];
+                    const expandedRecords = transformRecord(targetFields, record);
+                    const prevCount = items_count;
+                    items_count += expandedRecords.length;
+                    results[i] = null; // free memory
+                    
+                    // Add only the items that fall within [start, end)
+                    if (prevCount < end && items_count > start) {
+                        const sliceStart = Math.max(0, start - prevCount);
+                        const sliceEnd = Math.min(expandedRecords.length, end - prevCount);
+                        result.push(...expandedRecords.slice(sliceStart, sliceEnd));
+                    }
+                }
+                return [result, hidden_fields, items_count];
+            } else {
+                // Only transform items in range
+                const result: any[] = [];
+                for (let i = 0; i < results.length; i++) {
+                    if (i >= end) break;
+                    const record = results[i];
+                    results[i] = null; // free memory
+                    if (i >= start) {
+                        const expandedRecords = transformRecord(targetFields, record);
+                        result.push(...expandedRecords);
+                    }
+                }
+                return [result, hidden_fields, 0];
+            }
+        }
+        
+        const processedResults = transformRecordsInPlace(results, targetFields);
+        return [processedResults, hidden_fields, 0];
     }
-    return [results, []];
+    
+    // No view - still apply pagination if provided
+    if (pagination) {
+        const { start, end } = pagination;
+        const result: any[] = [];
+        for (let i = 0; i < results.length; i++) {
+            if (i >= end) break;
+            if (i >= start) {
+                result.push(results[i]);
+            }
+            results[i] = null; // free memory
+        }
+        return [result, [], 0];
+    }
+    
+    return [results, [], 0];
 }
-async function _applyViewForUiLargeTask(taskId: number, view: string, views: View[], inputData: any, per_page: number, start: number, end: number, containsListField: boolean): Promise<[number, any[], string[]]> {
+async function _applyViewForUiLargeTask(taskId: number, view: string, views: View[], inputData: any, _per_page: number, start: number, end: number, containsListField: boolean): Promise<[number, any[], string[]]> {
     const viewObj = view && views.find(v => v.id === view);
     let result: any[] = [];
     const hidden_fields: string[] = [];
@@ -372,23 +429,27 @@ async function _applyViewForUiLargeTask(taskId: number, view: string, views: Vie
         const targetFields: (Field | CustomField | ExpandDictField | ExpandListField)[] = isNotNullish(inputData) ? getFields(viewObj.fields, inputData, hidden_fields) : viewObj.fields;
         if (containsListField) {
             let items_count = 0
-            await TaskResults.streamTask(taskId, (record, index) => {
+            // @ts-ignore
+            await TaskResults.streamTask(taskId, (record, _index) => {
+                if (items_count >= end) return false;
                 const expandedRecords: any[] = transformRecord(targetFields, record);
-                items_count+=expandedRecords.length
+                const prevCount = items_count;
+                items_count += expandedRecords.length;
                 
-                if (result.length < per_page && index >= start && index < end) {
-                    result.push(...expandedRecords);
+                // Add only the items that fall within [start, end)
+                if (prevCount < end && items_count > start) {
+                    const sliceStart = Math.max(0, start - prevCount);
+                    const sliceEnd = Math.min(expandedRecords.length, end - prevCount);
+                    result.push(...expandedRecords.slice(sliceStart, sliceEnd));
                 }
             });
 
-            // Ensure result is less than per_page
-            if (result.length > per_page) {
-                result = result.slice(0, per_page);
-            }
             return [items_count, result, hidden_fields];
         } else {
+            // @ts-ignore
             await TaskResults.streamTask(taskId, (record, index) => {
-                if (index >= start && index < end) {
+                if (index >= end) return false;
+                if (index >= start) {
                     const expandedRecords: any[] = transformRecord(targetFields, record);
                     result.push(...expandedRecords);
                 }
@@ -397,8 +458,10 @@ async function _applyViewForUiLargeTask(taskId: number, view: string, views: Vie
         }
     }
 
+    // @ts-ignore
     await TaskResults.streamTask(taskId, (record, index) => {
-        if (index >= start && index < end) {
+        if (index >= end) return false;
+        if (index >= start) {
             result.push(record);
         }
     }, end);

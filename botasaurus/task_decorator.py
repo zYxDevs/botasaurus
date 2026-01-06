@@ -1,5 +1,6 @@
 from functools import wraps
 from traceback import print_exc, format_exc
+from datetime import timedelta
 from typing import Any, Callable, Optional, Union, List
 from .utils import is_errors_instance, NotFoundException
 from .beep_utils import beep_input
@@ -7,6 +8,7 @@ from .list_utils import flatten
 
 from botasaurus.decorators_common import print_running, write_output, IS_PRODUCTION, AsyncQueueResult, AsyncResult,  run_parallel, save_error_logs
 from .dontcache import is_dont_cache
+from .cache_storage import FileCacheStorage
 
 def task(
     _func: Optional[Callable] = None,
@@ -14,7 +16,9 @@ def task(
     parallel: Optional[Union[Callable[[Any], int], int]] = None,
     data: Optional[Union[Callable[[], Any], Any]] = None,
     metadata: Optional[Any] = None,
-    cache: Union[bool, str] = False,  
+    cache: Union[bool, str] = False,
+    expires_in: Optional[timedelta] = None,
+    cache_storage=None,
     beep: bool = False,
     run_async: bool = False,
     async_queue: bool = False,
@@ -35,12 +39,14 @@ def task(
         def wrapper_requests(*args, **kwargs) -> Any:
             print_running()
 
-            nonlocal parallel, data, cache, beep, run_async, async_queue, metadata
+            nonlocal parallel, data, cache, expires_in, cache_storage, beep, run_async, async_queue, metadata
             nonlocal close_on_crash, output, output_formats, max_retry, retry_wait, must_raise_exceptions, raise_exception, create_error_logs
 
             parallel = kwargs.get("parallel", parallel)
             data = kwargs.get("data", data)
             cache = kwargs.get("cache", cache)
+            expires_in = kwargs.get("expires_in", expires_in)
+            storage = kwargs.get("cache_storage", cache_storage) or FileCacheStorage
             beep = kwargs.get("beep", beep)
             run_async = kwargs.get("run_async", run_async)
             metadata = kwargs.get("metadata", metadata)
@@ -61,23 +67,15 @@ def task(
 
             fn_name = func.__name__
 
-            if cache:
-                from .cache import CacheMissException, _get,_has,_get_cache_path,_create_cache_directory_if_not_exists, _put,_remove
-                _create_cache_directory_if_not_exists(func)
-
             def run_task(
                 data,
                 retry_attempt,
             ) -> Any:
                 if cache is True:
-                    path = _get_cache_path(func, data)
-                    if _has(path):
-                        try:
-                          return _get(path)
-                        except CacheMissException:
-                          pass
-                elif cache == 'REFRESH' :
-                    path = _get_cache_path(func, data)
+                    # Returns {"data": value} or None
+                    cached = storage.get(fn_name, data, expires_in)
+                    if cached is not None:
+                        return cached["data"]
                     
                 result = None
                 try:
@@ -85,11 +83,11 @@ def task(
                         result = func(data, metadata)
                     else:
                         result = func(data)
-                    if cache is True or cache == 'REFRESH' :
+                    if cache is True or cache == 'REFRESH':
                         if is_dont_cache(result):
-                            _remove(path)
+                            storage.delete(fn_name, data)
                         else:
-                            _put(result, path)
+                            storage.put(fn_name, data, result)
 
                     if is_dont_cache(result):
                         if not return_dont_cache_as_is:

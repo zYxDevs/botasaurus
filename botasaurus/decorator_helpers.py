@@ -6,18 +6,20 @@ from datetime import timedelta
 from .utils import is_errors_instance
 
 from .cache import Cache, _get,CacheMissException, _has, _get_cache_path, _create_cache_directory_if_not_exists
+from .cache_storage import FileCacheStorage
 from .dontcache import is_dont_cache
 
-def cache(_func=None, *, cache=True, expires_in: Optional[timedelta] = None):
+def cache(_func=None, *, cache=True, expires_in: Optional[timedelta] = None, cache_storage=None):
     """
     Cache decorator to store and retrieve function results.
     
     Args:
         cache: Enable caching (True/False/'REFRESH' to force refresh)
         expires_in: Optional timedelta specifying how long the cache is valid.
-                   Example: , timedelta(days=7), timedelta(minutes=30)
+                   Example: timedelta(days=7), timedelta(minutes=30)
                    If the cached item is older than this duration, it will be treated as expired
                    and the function will be executed again.
+        cache_storage: Optional storage backend. Defaults to FileCacheStorage.
     
     Example:
         from datetime import timedelta
@@ -30,53 +32,37 @@ def cache(_func=None, *, cache=True, expires_in: Optional[timedelta] = None):
     def decorator_cache(func):
         @wraps(func)    
         def wrapper_cache(*args, **kwargs):
-            nonlocal cache, expires_in
+            nonlocal cache, expires_in, cache_storage
 
-            cache = kwargs.pop("cache", cache)
-            expires_in = kwargs.pop("expires_in", expires_in)
+            cache_enabled = kwargs.pop("cache", cache)
+            expires_in_val = kwargs.pop("expires_in", expires_in)
+            storage = kwargs.pop("cache_storage", cache_storage) or FileCacheStorage
 
-            if cache:
-                _create_cache_directory_if_not_exists(func)
-
-            def run_cache(*args, **kwargs):
-                if cache is True:
-                    path = _get_cache_path(func, [args, kwargs])
-                    if _has(path):
-                        try:
-                            # Check if cache has expired
-                            if expires_in is not None:
-                                if Cache.is_item_older_than(
-                                    func, 
-                                    [args, kwargs],
-                                    days=expires_in.days,
-                                    seconds=expires_in.seconds,
-                                    microseconds=expires_in.microseconds,
-                                ):
-                                    # Cache expired, delete it and re-execute
-                                    Cache.delete(func, [args, kwargs])
-                                else:
-                                    # Cache is still valid, return it
-                                    return _get(path)
-                            else:
-                                # No expiration set, return cache
-                                return _get(path)
-                        except CacheMissException:
-                            pass
-
-                result = func(*args, **kwargs)
-
-                if cache is True or cache == 'REFRESH':
-                    if is_dont_cache(result):
-                        Cache.delete(func, [args, kwargs])
-                    else:
-                        Cache.put(func, [args, kwargs], result)
-
+            if not cache_enabled:
+                return func(*args, **kwargs)
+            
+            key_data = [args, kwargs]
+            
+            if cache_enabled is True:
+                # Returns {"data": value} or None
+                cached = storage.get(func.__name__, key_data, expires_in_val)
+                if cached is not None:
+                    return cached["data"]  # Extract actual value
+            
+            # Execute function
+            result = func(*args, **kwargs)
+            
+            # Store result
+            if cache_enabled is True or cache_enabled == 'REFRESH':
                 if is_dont_cache(result):
-                    result = result.data
-
-                return result
-
-            return run_cache(*args, **kwargs)
+                    storage.delete(func.__name__, key_data)
+                else:
+                    storage.put(func.__name__, key_data, result)
+            
+            if is_dont_cache(result):
+                result = result.data
+            
+            return result
 
         return wrapper_cache
 

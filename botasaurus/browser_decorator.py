@@ -1,10 +1,12 @@
 from functools import wraps
 from traceback import print_exc, format_exc
+from datetime import timedelta
 from typing import Any, Callable, Optional, Union, List
 from botasaurus.decorators_common import evaluate_proxy, print_running, write_output, IS_PRODUCTION, AsyncQueueResult, AsyncResult,  run_parallel, save_error_logs
 from .utils import is_errors_instance, NotFoundException
 from .list_utils import flatten
 from .dontcache import is_dont_cache
+from .cache_storage import FileCacheStorage
 from botasaurus_driver.driver import Driver
 from pathlib import Path
 
@@ -29,7 +31,9 @@ def browser(
     parallel: Optional[Union[Callable[[Any], int], int]] = None,
     data: Optional[Union[Callable[[], Any], Any]] = None,
     metadata: Optional[Any] = None,
-    cache: Union[bool, str] = False,  
+    cache: Union[bool, str] = False,
+    expires_in: Optional[timedelta] = None,
+    cache_storage=None,
     block_images: bool = False,
     block_images_and_css: bool = False,
     window_size: Optional[Union[Callable[[Any], str], str]] = None,
@@ -71,11 +75,13 @@ def browser(
         def wrapper_browser(*args, **kwargs) -> Any:
             print_running()
 
-            nonlocal parallel, data, cache, block_images_and_css, block_images, window_size, metadata, add_arguments,chrome_executable_path, extensions, tiny_profile, wait_for_complete_page_load, lang, headless, beep, close_on_crash, async_queue, run_async, profile, proxy, user_agent, reuse_driver, raise_exception, must_raise_exceptions, output, output_formats, max_retry, retry_wait, create_driver, create_error_logs, enable_xvfb_virtual_display, host, port, remove_default_browser_check_argument
+            nonlocal parallel, data, cache, expires_in, cache_storage, block_images_and_css, block_images, window_size, metadata, add_arguments,chrome_executable_path, extensions, tiny_profile, wait_for_complete_page_load, lang, headless, beep, close_on_crash, async_queue, run_async, profile, proxy, user_agent, reuse_driver, raise_exception, must_raise_exceptions, output, output_formats, max_retry, retry_wait, create_driver, create_error_logs, enable_xvfb_virtual_display, host, port, remove_default_browser_check_argument
             
             parallel = kwargs.get("parallel", parallel)
             data = kwargs.get("data", data)
             cache = kwargs.get("cache", cache)
+            expires_in = kwargs.get("expires_in", expires_in)
+            storage = kwargs.get("cache_storage", cache_storage) or FileCacheStorage
             block_images = kwargs.get("block_images", block_images)
             block_images_and_css = kwargs.get("block_images_and_css", block_images_and_css)
             add_arguments = kwargs.get("add_arguments", add_arguments)
@@ -112,10 +118,6 @@ def browser(
 
             fn_name = func.__name__
 
-            if cache:
-                from .cache import CacheMissException,_get,_has,_get_cache_path,_create_cache_directory_if_not_exists, _put,_remove
-
-                _create_cache_directory_if_not_exists(func)
             if isinstance(proxy, list):
                 from itertools import cycle       
                 cycled_proxy = cycle(proxy)         
@@ -126,14 +128,10 @@ def browser(
 
             def run_task(data, retry_attempt, retry_driver=None) -> Any:
                 if cache is True:
-                    path = _get_cache_path(func, data)
-                    if _has(path):
-                        try:
-                          return _get(path)
-                        except CacheMissException:
-                          pass
-                elif cache == 'REFRESH' :
-                    path = _get_cache_path(func, data)
+                    # Returns {"data": value} or None
+                    cached = storage.get(fn_name, data, expires_in)
+                    if cached is not None:
+                        return cached["data"]
                     
 
                 evaluated_window_size = (
@@ -205,11 +203,11 @@ def browser(
                     else:
                         close_driver(driver)
 
-                    if cache is True or cache == 'REFRESH' :
+                    if cache is True or cache == 'REFRESH':
                         if is_dont_cache(result):
-                            _remove(path)
+                            storage.delete(fn_name, data)
                         else:
-                            _put(result, path)
+                            storage.put(fn_name, data, result)
 
                     if is_dont_cache(result):
                         if not return_dont_cache_as_is:

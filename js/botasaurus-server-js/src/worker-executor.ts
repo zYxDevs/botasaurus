@@ -502,8 +502,8 @@ export class WorkerExecutor extends TaskExecutor {
     }
 
     /**
-     * Set up graceful shutdown handlers.
-     * On SIGTERM/SIGINT, notify master about in-progress tasks.
+     * Set up graceful shutdown handler on global.
+     * Call global.cleanupWorker() from main.ts exit handlers.
      */
     private setupGracefulShutdown(): void {
         const shutdownHandler = async (signal: string) => {
@@ -525,14 +525,11 @@ export class WorkerExecutor extends TaskExecutor {
             }
         };
 
-        process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
-        process.on('SIGINT', () => shutdownHandler('SIGINT'));
-        
-        // Handle uncaught exceptions - try to release tasks
-        process.on('uncaughtException', async (error) => {
-            console.error('[Worker] Uncaught exception:', error);
-            await shutdownHandler('uncaughtException');
-        });
+        // Expose cleanup function on global (call from main.ts exit handlers)
+        // @ts-ignore
+        global.cleanupWorker = (signal: string) => {
+            return shutdownHandler(signal);
+        };
     }
 
     private async releaseTasksToPending(inProgressTaskIds: number[]) {

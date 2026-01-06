@@ -12,6 +12,7 @@ const {
   OldestDateFirstSort,
   AlphabeticAscendingSort,
   AlphabeticDescendingSort,
+  Sort,
 } = require('../src/sorts');
 
 describe('Sorting functions', () => {
@@ -95,5 +96,13 @@ describe('Sorting functions', () => {
     const sort = new AlphabeticDescendingSort('name');
     const sortedData = sort.apply(data());
     assert.deepStrictEqual(sortedData.map(item => item.name), ['John', 'Eve', 'Bob', 'Alice']);
+  });
+
+  it('should apply nested sorts when using Sort wrapper', () => {
+    const sort = new Sort('Best Customers', [
+      new NumericDescendingSort('age'),
+    ]);
+    const sortedData = sort.apply(data());
+    assert.deepStrictEqual(sortedData.map(item => item.age), [35, 30, 28, 25]);
   });
 });

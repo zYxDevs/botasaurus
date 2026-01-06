@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "upload": "python3 increment_version.py && rm -rf dist/ pg_cache_storage.egg-info  MANIFEST && python3 setup.py sdist && python3 -m pip install -e . && python3 -m twine upload dist/* --verbose",
+    "install": "rm -rf dist/ pg_cache_storage.egg-info  MANIFEST && python3 setup.py sdist && python3 -m pip install -e .",
+    "local-install": "python3 -m pip install ."
+  }
+}
+
+

@@ -1,3 +1,4 @@
+// import * as bt from 'botasaurus/output';
 import { snakeCase, capitalCase as titleCase } from 'change-case';
 // import { snakeCase, capitalCase as titleCase } from './change-case';
 
@@ -27,12 +28,12 @@ abstract class BaseSort {
   protected abstract getLabel(): string;
 
   protected getSortKey(): (item: any) => any {
-    const noneValue = this.reverse ? [0] : [3];
-
+    
     return (item: any) => {
       const value = item[this.field];
-
+      
       if (isNullish(value)) {
+        const noneValue = this.reverse ? [0] : [3];
         return noneValue;
       }
 
@@ -40,66 +41,49 @@ abstract class BaseSort {
     };
   }
 
-  public apply(data: any[]): any[] {
-    const calculateSortKey = this.getSortKey()
-    return [...data].sort((a, b) => {
-      
-      const keyA = calculateSortKey(a);
-      const keyB = calculateSortKey(b);
-
-      if (Array.isArray(keyA) && Array.isArray(keyB)) {
-        // Compare list (tuple equivalent) values
-        for (let i = 0; i < Math.min(keyA.length, keyB.length); i++) {
-          if (keyA[i] < keyB[i]) {
-            return this.reverse ? 1 : -1;
-          } else if (keyA[i] > keyB[i]) {
-            return this.reverse ? -1 : 1;
-          }
-        }
-        return this.reverse ? keyB.length - keyA.length : keyA.length - keyB.length;
-      } else {
-        // Compare other types of values
-        if (keyA < keyB) {
+  private compareSortKeys(keyA: any, keyB: any): number {
+    if (Array.isArray(keyA) && Array.isArray(keyB)) {
+      // Compare list (tuple equivalent) values
+      for (let i = 0; i < Math.min(keyA.length, keyB.length); i++) {
+        if (keyA[i] < keyB[i]) {
           return this.reverse ? 1 : -1;
-        } else if (keyA > keyB) {
+        } else if (keyA[i] > keyB[i]) {
           return this.reverse ? -1 : 1;
-        } else {
-          return 0;
         }
       }
-  
-    });
+      return this.reverse ? keyB.length - keyA.length : keyA.length - keyB.length;
+    }
+
+    // Compare other types of values
+    if (keyA < keyB) {
+      return this.reverse ? 1 : -1;
+    } else if (keyA > keyB) {
+      return this.reverse ? -1 : 1;
+    } else {
+      return 0;
+    }
+  }
+
+  public apply(data: any[]): any[] {
+    const copy = [...data];
+    this.applyInPlace(copy);
+    return copy;
   }
 
   public applyInPlace(data: any[]): void {
-    const calculateSortKey = this.getSortKey()
+    const calculateSortKey = this.getSortKey();
+    const cache = new Map<any, any>();
 
-    data.sort((a, b) => {
-
-      const keyA = calculateSortKey(a);
-      const keyB = calculateSortKey(b);
-
-      if (Array.isArray(keyA) && Array.isArray(keyB)) {
-        // Compare list (tuple equivalent) values
-        for (let i = 0; i < Math.min(keyA.length, keyB.length); i++) {
-          if (keyA[i] < keyB[i]) {
-            return this.reverse ? 1 : -1;
-          } else if (keyA[i] > keyB[i]) {
-            return this.reverse ? -1 : 1;
-          }
-        }
-        return this.reverse ? keyB.length - keyA.length : keyA.length - keyB.length;
-      } else {
-        // Compare other types of values
-        if (keyA < keyB) {
-          return this.reverse ? 1 : -1;
-        } else if (keyA > keyB) {
-          return this.reverse ? -1 : 1;
-        } else {
-          return 0;
-        }
+    const keyOf = (item: any) => {
+      if (cache.has(item)) {
+        return cache.get(item);
       }
-    });
+      const key = calculateSortKey(item);
+      cache.set(item, key);
+      return key;
+    };
+
+    data.sort((a, b) => this.compareSortKeys(keyOf(a), keyOf(b)));
   }
 
   public toJson(): { id: string; label: string } {
@@ -352,14 +336,20 @@ class Sort extends BaseSort {
   public sorts: BaseSort[];
 
   public override apply(data: any[]): any[] {
+    const copy = [...data];
+    this.applyInPlace(copy);
+    return copy;
+  }
+
+  public override applyInPlace(data: any[]): void {
+    // acts as the primary sort key (relies on Node/V8 stable Array.sort).
     for (const sort of this.sorts) {
-      sort.apply(data);
+      sort.applyInPlace(data);
     }
-    return data;
   }
 
   protected getLabel(): string {
-    throw new Error('Method not implemented.');
+    return this.label ?? 'Sort';
   }
 
   public getClassName(): string {
@@ -398,3 +388,17 @@ export {
   AlphabeticDescendingSort,
   Sort,
 };
+
+// const bestCustomers = new Sort('Tech Savvya, High Earners', [
+//   // new AlphabeticAscendingSort('name'),
+//   // new NumericDescendingSort('reviews'),
+//   new TruthyFirstSort('website'),
+// ])
+
+
+
+// const dt = bt.readJson('/Users/om/Downloads/Google Maps Extractor/all-task-1.json')
+// // new NumericDescendingSort('reviews').applyInPlace(dt)
+// bestCustomers.applyInPlace(dt)
+
+// bt.writeTempJson(dt)
