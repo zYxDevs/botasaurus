@@ -1,0 +1,47 @@
+name: Build and Deploy sqlite-cache-storage
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'sqlite-cache-storage/**'
+
+jobs:
+  build-and-deploy:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install twine setuptools
+
+    - name: Build and Push 
+      run: |
+        npm run upload -- -u __token__ -p ${{ secrets.PYPI_TOKEN }}
+      working-directory: sqlite-cache-storage
+
+    - name: Pull Changes
+      run: |
+        git pull
+
+    - name: Commit & Push changes
+      uses: actions-js/push@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: master
+
+

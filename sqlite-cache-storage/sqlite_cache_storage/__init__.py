@@ -1,57 +1,22 @@
 import json
 from hashlib import sha256
 
-__all__ = ['PostgresCacheStorage']
+__all__ = ['SqliteCacheStorage']
 
 
-class PostgresCacheStorage:
-    """PostgreSQL cache storage using psycopg3."""
+class SqliteCacheStorage:
+    """SQLite cache storage using sqlite3."""
     
-    def __init__(self, host: str='localhost', port: int=5432, username: str='postgres', password: str='postgres', db_name: str='cache', table_name: str = "botasaurus_cache"):
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        self.db_name = db_name
+    def __init__(self, db_path: str = 'cache.db', table_name: str = "botasaurus_cache"):
+        self.db_path = db_path
         self.table_name = table_name
-        self._ensure_database()
         self._ensure_table()
     
-    def _get_admin_connection(self):
-        """Connect to postgres database to perform admin operations."""
-        import psycopg
-        return psycopg.connect(
-            host=self.host,
-            port=self.port,
-            user=self.username,
-            password=self.password,
-            dbname='postgres',
-            autocommit=True
-        )
-    
-    def _ensure_database(self):
-        """Create the database if it doesn't exist."""
-        with self._get_admin_connection() as conn:
-            # Check if database exists
-            result = conn.execute(
-                "SELECT 1 FROM pg_database WHERE datname = %s",
-                (self.db_name,)
-            ).fetchone()
-            if not result:
-                # Create database (must be outside transaction, hence autocommit=True)
-                conn.execute(f'CREATE DATABASE "{self.db_name}"')
-    
     def _get_connection(self):
-        import psycopg
-        from psycopg.rows import dict_row
-        return psycopg.connect(
-            host=self.host,
-            port=self.port,
-            user=self.username,
-            password=self.password,
-            dbname=self.db_name,
-            row_factory=dict_row
-        )
+        import sqlite3
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
     
     def _hash(self, data) -> str:
         """Generate sha256 hash from data."""
@@ -82,24 +47,27 @@ class PostgresCacheStorage:
         """
         key = self._make_key(func_name, key_data)
         with self._get_connection() as conn:
+            cursor = conn.cursor()
             if expires_in is not None:
-                row = conn.execute(
+                cursor.execute(
                     f"""SELECT data FROM {self.table_name} 
-                       WHERE key = %s AND created_at > NOW() - INTERVAL '{expires_in.total_seconds()} seconds'""",
-                    (key,)
-                ).fetchone()
+                       WHERE key = ? AND created_at > datetime('now', ?)""",
+                    (key, f'-{int(expires_in.total_seconds())} seconds')
+                )
+                row = cursor.fetchone()
                 if row is None:
-                    conn.execute(
-                        "DELETE FROM %s WHERE key = %%s" % self.table_name, 
+                    cursor.execute(
+                        "DELETE FROM %s WHERE key = ?" % self.table_name, 
                         (key,)
                     )
                     conn.commit()
                     return None
             else:
-                row = conn.execute(
-                    "SELECT data FROM %s WHERE key = %%s" % self.table_name,
+                cursor.execute(
+                    "SELECT data FROM %s WHERE key = ?" % self.table_name,
                     (key,)
-                ).fetchone()
+                )
+                row = cursor.fetchone()
             
             if row:
                 return {"data": json.loads(row["data"])}
@@ -111,9 +79,9 @@ class PostgresCacheStorage:
         with self._get_connection() as conn:
             conn.execute("""
                 INSERT INTO %s (key, data, created_at)
-                VALUES (%%s, %%s, CURRENT_TIMESTAMP)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT (key) DO UPDATE SET 
-                    data = EXCLUDED.data,
+                    data = excluded.data,
                     created_at = CURRENT_TIMESTAMP
             """ % self.table_name, (key, data_json))
             conn.commit()
@@ -122,7 +90,7 @@ class PostgresCacheStorage:
         key = self._make_key(func_name, key_data)
         with self._get_connection() as conn:
             conn.execute(
-                "DELETE FROM %s WHERE key = %%s" % self.table_name,
+                "DELETE FROM %s WHERE key = ?" % self.table_name,
                 (key,)
             )
             conn.commit()
