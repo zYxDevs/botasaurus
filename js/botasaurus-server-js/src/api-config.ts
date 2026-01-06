@@ -986,4 +986,5 @@ class ApiConfig {
         this.routeSetupFn = routeSetupFn;
     }
 }
+
 export default ApiConfig;
