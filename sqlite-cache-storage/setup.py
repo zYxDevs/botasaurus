@@ -18,7 +18,7 @@ def get_description():
 
 setup(
     name="sqlite-cache-storage",
-    version='1.0.0',
+    version='1.0.1',
     author="Chetan Jain",
     author_email="53407137+Chetan11-dev@users.noreply.github.com",
     description="SQLite cache storage for botasaurus.",
