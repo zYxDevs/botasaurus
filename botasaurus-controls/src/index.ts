@@ -36,12 +36,18 @@ function isValidPositiveInteger(param: any): boolean {
 }
 
 function ensureEndsWithDot(validationResult: string): string {
-  return validationResult.endsWith(".")
-    ? validationResult
-    : validationResult + "."
+  // Don't add a dot if it already ends with ellipsis or a single dot
+  if (validationResult.endsWith(".") ||validationResult.endsWith("...")) {
+    return validationResult
+  }
+  return validationResult + "."
 }
 
 function ensureNotEndsWithDot(validationResult: string): string {
+  // Preserve ellipsis, only remove a single trailing dot
+  if (validationResult.endsWith("...")) {
+    return validationResult
+  }
   return validationResult.endsWith(".")
     ? validationResult.slice(0, -1)
     : validationResult

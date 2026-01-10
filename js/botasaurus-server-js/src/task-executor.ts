@@ -8,7 +8,7 @@ import { isDontCache } from 'botasaurus/dontcache'
 import { formatExc } from 'botasaurus/utils'
 import { cleanDataInPlace } from 'botasaurus/output'
 import { getScraperErrorMessage, Server } from './server'
-import { isLargeFile, isNotEmptyObject } from './utils'
+import { isLargeFile, isNotEmptyObject, omitKeys } from './utils'
 
 /**
  * Task priority levels for queue ordering
@@ -487,7 +487,7 @@ class TaskExecutor {
         const scraperName = task.scraper_name
         const parent_task_id = task.parent_task_id
         const metadata = isNotEmptyObject(task.metadata) ? { metadata: task.metadata } : {}
-        const taskData = task.data
+        let taskData = task.data
 
         const fn = Server.getScrapingFunction(scraperName)
         const { isAborted, cleanup } = this.createIsAborted(taskId)
@@ -528,7 +528,14 @@ class TaskExecutor {
             if (isDontCache(result)) {
                 isResultDontCached = true
                 processedResult = result.data
+            } else {
+                // Only omit metadata keys if caching will occur
+                if (Server.cache && task.metadata && isNotEmptyObject(task.metadata)) {
+                    const metaDataKeys = new Set(Object.keys(task.metadata))
+                    taskData = omitKeys(taskData, metaDataKeys)
+                }
             }
+
 
             releaseTask()
 

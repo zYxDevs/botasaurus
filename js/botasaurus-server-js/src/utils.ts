@@ -150,4 +150,15 @@ function wrapDbOperationInPromise<A=any>(operation: any): Promise<A> {
 function isNoentError(error: any) {
   return error.code === 'ENOENT'
 }
-export { isNoentError, wrapDbOperationInPromise, parseBoolean, callOnce, db_path, id_path, pathTaskResults, pathTaskResultsTasks, pathTaskResultsCacheDirect,pathTaskResultsCache ,cacheStoragePath, isNotEmptyObject,isEmpty,  isObject, isEmptyObject, targetDirectory, isLargeFile, cleanBasePath};
+
+function omitKeys<T extends Record<string, any>>(obj: T, keysToOmit: Set<string>): Partial<T> {
+  const result: Partial<T> = {};
+  for (const key of Object.keys(obj)) {
+    if (!keysToOmit.has(key)) {
+      result[key as keyof T] = obj[key];
+    }
+  }
+  return result;
+}
+
+export { isNoentError, wrapDbOperationInPromise, parseBoolean, callOnce, db_path, id_path, pathTaskResults, pathTaskResultsTasks, pathTaskResultsCacheDirect,pathTaskResultsCache ,cacheStoragePath, isNotEmptyObject,isEmpty,  isObject, isEmptyObject, targetDirectory, isLargeFile, cleanBasePath, omitKeys};

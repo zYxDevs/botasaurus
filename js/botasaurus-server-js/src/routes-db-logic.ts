@@ -2,7 +2,7 @@ import { isAffirmative } from 'botasaurus/cache'
 import fs from 'fs';
 import { createTask, createTaskName, db, getAutoincrementId, isFailedAndNonAllTask, isoformat, serializeTask, serializeUiDisplayTask, serializeUiOutputTask, sortDictByKeys, StatusKind, Task, TaskStatus } from './models';
 import { isNotNullish, isNullish } from './null-utils';
-import { isObject, isNotEmptyObject, wrapDbOperationInPromise } from './utils';
+import { isObject, isNotEmptyObject, wrapDbOperationInPromise, omitKeys } from './utils';
 import { kebabCase } from 'change-case';
 import { deepCloneDict, isStringOfMinLength, serialize, validateScraperName, validateTaskRequest, validateResultsRequest, validateDownloadParams, isValidPositiveInteger, isValidPositiveIntegerIncludingZero,isListOfValidIds,  isValidId, validateUiPatchTask, createTaskNotFoundError, tryIntConversion } from './validation';
 import { TaskHelper, createProjection } from './task-helper';
@@ -353,6 +353,10 @@ async function createTasks(
   if (scraper.isGoogleChromeRequired) {
     checkChrome()    
   }
+  
+  const hasMetaData = metadata && isNotEmptyObject(metadata)
+  const metaDataKeys = hasMetaData ? new Set(Object.keys(metadata)) : new Set<string>()
+
   const createAllTasks = scraper.create_all_task;
   const split_task = scraper.split_task;
   const scraper_name = scraper.scraper_name;
@@ -366,6 +370,11 @@ async function createTasks(
 
   let tasksData: any[];
   let splitted_task_length  = 0
+
+  if (hasMetaData) {
+    data = { ...data, ...metadata }
+  }
+
   if (split_task) {
     tasksData = await split_task(deepCloneDict(data));
     if (tasksData.length === 0) {
@@ -412,7 +421,7 @@ async function createTasks(
 
   const createCachedTasks = async (task_datas: any[]) => {
     const ls = task_datas.map((t) => ({
-      key: createCacheKey(scraper_name, t),
+      key: createCacheKey(scraper_name, hasMetaData ? omitKeys(t, metaDataKeys) : t),
       task_data: t,
     }));
     const cacheKeys = ls.map((item) => item.key);

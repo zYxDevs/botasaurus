@@ -46,24 +46,7 @@ To exclude these fields from caching, mark an input control with `isMetadata: tr
 })
 ```
 
-When `isMetadata` is set to `true`:
-- The value moves from the `data` object to the `metadata` object
-- Botasaurus excludes `metadata` when creating cache keys
-
-You can access metadata values in your scraper like this:
-
-```ts
-const myScraper = task({
-  name: "myScraper",
-  run: ({ data, metadata }) => {
-    // The api_key is now in metadata and won't affect caching
-    // highlight-next-line
-    const apiKey = metadata["api_key"];
-    
-    // ... your scraper logic
-  }
-})
-```
+When `isMetadata` is set to `true`, the value is not included in the cache key.
 
 This approach ensures that only essential, data-defining inputs determine caching behavior, making your cache more effective.
 
