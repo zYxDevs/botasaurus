@@ -43,17 +43,21 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: master
 
-    - name: Update Botasaurus Desktop Starter Dependencies
-      run: |
-        git clone https://${{ secrets.PAT }}@github.com/omkarcloud/botasaurus-desktop-starter.git desktop-starter
-        cd desktop-starter
-        npm i
-        npm run update
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git pull
-        git add .
-        git commit -m "Update Botasaurus Desktop Starter Dependencies"
-        git push
+    - uses: nick-fields/retry@v2
+      name: Update Botasaurus Desktop Starter Dependencies
+      with:
+        timeout_minutes: 10
+        max_attempts: 2
+        command: |
+          git clone https://${{ secrets.PAT }}@github.com/omkarcloud/botasaurus-desktop-starter.git desktop-starter
+          cd desktop-starter
+          npm i
+          npm run update
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull
+          git add .
+          git commit -m "Update Botasaurus Desktop Starter Dependencies"
+          git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
