@@ -447,11 +447,13 @@ export function applyFiltersInPlace(
     for (const filterObj of applicableFilters) {
       if (!(filterObj.hasFilterValue(record))) {
         const rep = JSON.stringify(record, null, 4);
-        throw new JsonHTTPResponseWithMessage(
+        console.error(
           `Filter field ${filterObj.field} not found in data record: ${
             rep.length >= 1003 ? rep.slice(0, 1000) + '...' : rep
-          }.`
+          }.\nSkipping record.`
         );
+        passesAllFilters = false;
+        break;
       }
       if (!filterObj.filter(filtersData[filterObj.id], filterObj.getFilterValue(record))) {
         passesAllFilters = false;

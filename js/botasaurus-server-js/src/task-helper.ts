@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
 import { isNotNullish, isNullish } from "./null-utils";
 import { createTask, db, Task } from "./models";
 import { TaskResults } from "./task-results";
@@ -159,7 +160,7 @@ async function writeDeduplicatedTasks(
     const shouldNormalizeFlag = shouldNormalize(allKeys, firstItemKeyCount)
     let needsRerun = false
 
-    const tempfile = taskFilePath + '.temp'
+    const tempfile = taskFilePath + '.' + randomUUID() + '.temp' 
     const ndjsonWriteStream = new NDJSONWriteStream(tempfile)
     const seen = new Set()
 
