@@ -450,7 +450,7 @@ export function applyFiltersInPlace(
         console.error(
           `Filter field ${filterObj.field} not found in data record: ${
             rep.length >= 1003 ? rep.slice(0, 1000) + '...' : rep
-          }.\nSkipping record.`
+          }\nSkipping record.`
         );
         passesAllFilters = false;
         break;
