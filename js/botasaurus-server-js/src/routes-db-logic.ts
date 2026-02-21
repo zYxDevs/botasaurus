@@ -99,10 +99,13 @@ async function queryTasks(
   page?: any,
   per_page?: any,
   serializer: (task: any, withResults: boolean) => Promise<any> = serializeTask,
-  parent_task_id?: number | null
+  parent_task_id?: number | null,
+  status?: string | null
 ): Promise<any> {
   const projectionFields = createProjection(ets);
-  const queryFilter = isNotNullish(parent_task_id) ? { parent_task_id } : {};
+  const queryFilter: Record<string, any> = {};
+  if (isNotNullish(parent_task_id)) queryFilter.parent_task_id = parent_task_id;
+  if (status) queryFilter.status = status;
   const total_count = await wrapDbOperationInPromise((cb:any) => db.count(queryFilter, cb));
 
   if (isNullish(per_page)) {
@@ -689,7 +692,14 @@ async function executeGetTasks(queryParams: Record<string, any>): Promise<any> {
     }
   }
 
-  return queryTasks(getEts(), withResults, page, per_page, serializeTask, parent_task_id);
+  const status = queryParams.status;
+  if (isNotNullish(status) && ![TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.ABORTED].includes(status)) {
+    throw new JsonHTTPResponseWithMessage(
+      `Invalid 'status' parameter value: "${status}". It must be one of: pending, in_progress, completed, failed, aborted.`
+    );
+  }
+
+  return queryTasks(getEts(), withResults, page, per_page, serializeTask, parent_task_id, status);
 }
   
   function isValidAllTasks(tasks: any[]): boolean {
@@ -1066,7 +1076,7 @@ function convertUnicodeDictToAsciiDictInPlace(inputList: any[]): any[] {
     // Only abort tasks that are in PENDING or IN_PROGRESS status
     const abortableStatuses: string[] = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS];
     if (!abortableStatuses.includes(status)) {
-      // return;
+      return;
     }
 
     let fn: (() => Promise<void>) | null = null;

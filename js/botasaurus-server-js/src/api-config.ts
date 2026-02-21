@@ -10,6 +10,7 @@ import {
     deleteSingleTask,
     bulkAbortTasks,
     bulkDeleteTasks,
+    bulkRetryTasks,
     getAppProps,
     isAnyTaskUpdated,
     isTaskUpdated,
@@ -602,6 +603,12 @@ export function buildApp(
     app.post(`${apiBasePath}/tasks/bulk-delete`, async (request, _) => {
         const jsonData = request.body;
         const result = await bulkDeleteTasks(jsonData);
+        return result;
+    });
+
+    app.post(`${apiBasePath}/tasks/bulk-retry`, async (request, _) => {
+        const jsonData = request.body;
+        const result = await bulkRetryTasks(jsonData);
         return result;
     });
 

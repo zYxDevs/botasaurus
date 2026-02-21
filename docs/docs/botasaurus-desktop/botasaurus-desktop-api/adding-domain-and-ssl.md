@@ -53,12 +53,12 @@ The process involves two main steps:
 
    I use Porkbun because:
    - Unlike Cloudflare Domains, which is primarily a CDN provider, Porkbun specializes in domain registration. I want a specialist to manage my domains.
-   - It offers automatic renewals.
+   <!-- - It offers automatic renewals. -->
    - It sends multiple renewal reminders (45 days and 30 days before expiry), so I don't forget to renew my domains.
 
    ![Porkbun Renewal Emails](https://raw.githubusercontent.com/omkarcloud/botasaurus/master/images/domains/porkbun-renewal-emails.png)
 
-   Also, Porkbun's logo and branding are funny, nevertheless they provide a good experience and are [highly rated on Trustpilot.](https://www.trustpilot.com/review/porkbun.com)
+   <!-- Also, Porkbun's logo and branding are funny, nevertheless they provide a good experience and are [highly rated on Trustpilot.](https://www.trustpilot.com/review/porkbun.com) -->
 
 2. Next, log in to your domain registrar and create DNS **A records** pointing to your VM's IP address.
 

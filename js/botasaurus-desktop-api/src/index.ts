@@ -291,7 +291,7 @@ const api = new Api({ apiUrl: 'https://example.com' })`);
         }
     }
 
-    async getTasks({ page = 1, perPage, withResults = false, parentTaskId }: { page?: number; perPage?: number; withResults?: boolean; parentTaskId?: number } = { page: 1, withResults: true }): Promise<PaginatedResponse<Task>> {
+    async getTasks({ page = 1, perPage, withResults = false, parentTaskId, status }: { page?: number; perPage?: number; withResults?: boolean; parentTaskId?: number; status?: string } = { page: 1, withResults: true }): Promise<PaginatedResponse<Task>> {
         /**
          * Fetches tasks from the server, with optional result inclusion, pagination, and filtering.
          *
@@ -299,6 +299,7 @@ const api = new Api({ apiUrl: 'https://example.com' })`);
          * @param perPage The number of tasks to return per page.
          * @param withResults Whether to include the task results in the response.
          * @param parentTaskId Filter tasks by parent task ID.
+         * @param status Filter tasks by status (pending, in_progress, completed, failed, aborted).
          * @return A dictionary containing the task results and pagination information.
          */
         const url = this._makeApiUrl("tasks");
@@ -308,6 +309,7 @@ const api = new Api({ apiUrl: 'https://example.com' })`);
         if (page !== undefined && page !== null) params.page = page;
         if (perPage !== undefined && perPage !== null) params.per_page = perPage;
         if (parentTaskId !== undefined && parentTaskId !== null) params.parent_task_id = parentTaskId;
+        if (status !== undefined && status !== null) params.status = status;
         try {
             const response = await axios.get(url, { params });
 
@@ -331,6 +333,10 @@ const api = new Api({ apiUrl: 'https://example.com' })`);
             }
             throw error;
         }
+    }
+
+    async getFailedTasks({ page = 1, perPage, withResults = false, parentTaskId }: { page?: number; perPage?: number; withResults?: boolean; parentTaskId?: number } = { page: 1, withResults: true }): Promise<PaginatedResponse<Task>> {
+        return this.getTasks({ page, perPage, withResults, parentTaskId, status: 'failed' });
     }
 
     async getTask(taskId: number): Promise<Task> {
@@ -564,6 +570,28 @@ const api = new Api({ apiUrl: 'https://example.com' })`);
             const response = await axios.post(url, payload);
 
             this._writeJson("abort_tasks", response.data);
+            return response.data;
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                raiseIfBadException(error.response as AxiosResponse);
+            }
+            throw error;
+        }
+    }
+
+    async retryTasks({ taskIds }: { taskIds: number[] }): Promise<OkResponse> {
+        /**
+         * Bulk retries failed tasks.
+         *
+         * @param taskIds A list of task IDs to be retried.
+         * @return A success message.
+         */
+        const url = this._makeApiUrl("tasks/bulk-retry");
+        const payload = { task_ids: taskIds };
+        try {
+            const response = await axios.post(url, payload);
+
+            this._writeJson("retry_tasks", response.data);
             return response.data;
         } catch (error) {
             if (axios.isAxiosError(error)) {
